@@ -5,7 +5,6 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.Vector;
 
 // API help : http://robocode.sourceforge.net/docs/robocode/robocode/Robot.html
 
@@ -89,10 +88,13 @@ public class Korven extends AdvancedRobot
 
     @Override
     public void onHitWall(HitWallEvent e) {
-        turnRight(getRadarHeading() - getHeading());
+        //turnRight(getRadarHeading() - getHeading());
         //avoidWall();
-        setAhead(WALL_LIMIT*2);
+        //setAhead(WALL_LIMIT*2);
         //dir = -dir;
+        clearAllEvents();
+        turnToMiddle(true);
+        ahead(WALL_LIMIT*2);
     }
 
     private void lock(ScannedRobotEvent e){
@@ -252,24 +254,20 @@ public class Korven extends AdvancedRobot
         System.out.println(location);
     }
 
-    private void avoidWall2(){
-        double dx = getBattleFieldWidth() - getX();
-        double dy = getBattleFieldHeight() - getY();
+    private void turnToMiddle(boolean instantTurn){
+        double dx = (getBattleFieldWidth()/2) - getX();
+        double dy = (getBattleFieldHeight()/2) - getY();
 
-        Vector<Double> toMiddle = new Vector<>();
-        toMiddle.add(dx);
-        toMiddle.add(dy);
+        Vector2D toMiddle = new Vector2D(dx,dy);
+        Vector2D heading = new Vector2D(Math.cos(-(getHeadingRadians()+(Math.PI/2))), Math.sin(-(getHeadingRadians()+(Math.PI/2))));
 
-        Vector<Double> heading = new Vector<>();
-        heading.add(Math.cos(getHeadingRadians()));
-        heading.add(Math.sin(getHeadingRadians()));
+        System.out.println("Degrees: " + toMiddle.minAngle(heading) + " Heading vector: " + heading);
 
-        //Linear Algebra!! A dot B = ||A|| * ||B|| * cosv
-        //cosv = A dot B / ||A|| * ||B||
-        //v = arccos((A dot B)/(||A|| * ||B||))
-
-        double angle = Math.acos(dot(toMiddle, heading)/
-                (Math.sqrt(Math.pow(oh god))));
+        if(instantTurn){
+            turnRight(toMiddle.minAngle(heading));
+        }else{
+            setTurnRight(Vector2D.minAngle(toMiddle, heading));
+        }
     }
 
     private double getDistanceToWall(){
@@ -295,17 +293,5 @@ public class Korven extends AdvancedRobot
         //System.out.println("Required percent: " + distance/getMaxDistance() + " Percent: " + hitRatio);
         return hitRatio > distance/getMaxDistance();
         //If there are many hits, you can shoot further
-    }
-
-    private double dot(Vector<Double> a, Vector<Double> b){
-        double dot = 0;
-        if(a.size() == b.size()){
-            for(int i = 0; i < a.size(); i++){
-                dot += a.get(i)*b.get(i);
-            }
-        }else{
-            dot = -1;
-        }
-        return dot;
     }
 }
