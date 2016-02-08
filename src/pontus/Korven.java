@@ -29,7 +29,7 @@ public class Korven extends AdvancedRobot
     @Override
     public void run() {
 
-        setColors(new Color(85, 235,255),
+        setColors(new Color(148, 255, 68),
                 new Color(27, 104, 27),
                 new Color(65, 154, 42)); // body,gun,radar
 
@@ -40,19 +40,20 @@ public class Korven extends AdvancedRobot
 
         // Robot main loop
         while(true) {
-            execute();
             if(getDistanceToWall() > WALL_LIMIT){
-                for(int i = 0; i < 10 && locked; i++){
+                /*for(int i = 0; i < 10 && locked; i++){
                     int turnFac = 10;
-                    turnRadarRight(i*turnFac);
-                    turnRadarRight(-2*i*turnFac);
-                    turnRadarRight(i*turnFac);
+                    setTurnRadarRight(i*turnFac);
+                    setTurnRadarRight(-2*i*turnFac);
+                    setTurnRadarRight(i*turnFac);
+                }*/
+                if(!locked){
+                    setTurnRadarRight(360);
                 }
-                locked = false;
-                setTurnRadarRight(360);
             }else{
                 setAhead(100*dir);
             }
+            execute();
         }
     }
 
@@ -60,11 +61,10 @@ public class Korven extends AdvancedRobot
     public void onScannedRobot(ScannedRobotEvent e) {
         lock(e);
         if(!vsJaguar || e.getEnergy() < 10){
-            lockAndFire(e);
+          lockAndFire(e);
         }
         keepDistance(e);
-        avoid(e);
-
+       avoid(e);
     }
 
     @Override
@@ -92,17 +92,35 @@ public class Korven extends AdvancedRobot
         //avoidWall();
         //setAhead(WALL_LIMIT*2);
         //dir = -dir;
-        clearAllEvents();
-        turnToMiddle(true);
-        ahead(WALL_LIMIT*2);
+        //clearAllEvents();
+        //turnToMiddle();
+        dir = -dir;
+        setAhead(WALL_LIMIT*2*dir);
+    }
+
+    @Override
+    public void onPaint(Graphics2D g) {
+        double dx = (getBattleFieldWidth()/2) - getX();
+        double dy = (getBattleFieldHeight()/2) - getY();
+
+        Vector2D toMiddle = new Vector2D(dx,dy);
+        Vector2D heading = new Vector2D(Math.signum(getVelocity())*100*Math.cos(-(getHeadingRadians()+(Math.PI/2))),
+                Math.signum(getVelocity())*100*Math.sin(-(getHeadingRadians()+(Math.PI/2))));
+
+        toMiddle.paintVector(g, getX(), getY());
+        heading.paintVector(g, getX(), getY());
+
+        //g.setColor(java.awt.Color.RED);
+        //g.drawLine((int)getX(), (int)getY(), (int)(getX() + Math.signum(getVelocity())* 100*Math.cos(-getHeadingRadians() + Math.PI/2)), (int)(getY() + Math.signum(getVelocity()) *  100*Math.sin(-getHeadingRadians() + Math.PI/2)));
     }
 
     private void lock(ScannedRobotEvent e){
         double radBear = getRadarBearing(e);
+        System.out.println(String.valueOf(radBear));
         setTurnRadarRight(radBear);
         double deltaAngle = getRadarHeading() - getGunHeading();
         setTurnGunRight(deltaAngle);
-        checkScan(radBear);
+
         locked = true;
     }
 
@@ -111,7 +129,6 @@ public class Korven extends AdvancedRobot
         double distance = e.getDistance();
         double deltaAngle = getRadarHeading() - getGunHeading();
 
-        checkScan(getRadarBearing(e));
         if(true) { //No saved data
             if (deltaAngle < 2 && deltaAngle > -2 && closeEnough(distance)) {
                 double eSpeed = e.getVelocity();
@@ -130,7 +147,7 @@ public class Korven extends AdvancedRobot
                 if(bulletDistance != 0 && bulletDistance < getMaxDistance()){
                     setTurnGunRightRadians(Math.acos(angle) + angle*0.1f);
                 }
-                bullet = (fireBullet(firePower));
+                bullet = (setFireBullet(firePower));
                 if (bullet != null) {
                     bullets.add(new BulletData(bullet, getRadarHeading(), getX(), getY(), e));
                     shotsFired++;
@@ -181,7 +198,6 @@ public class Korven extends AdvancedRobot
 
 
        // System.out.println((e.getBearing() - 90)*adjust*dir);
-        checkScan(getRadarBearing(e));
         setAhead((rand.nextInt(100) + 70)*dir);
     }
 
@@ -190,12 +206,6 @@ public class Korven extends AdvancedRobot
             dir = -dir;
         }
         eEnergy = e.getEnergy();
-    }
-
-    private void checkScan(double radarBearing){
-        if(radarBearing > SCAN_LIMIT){
-            scan();
-        }
     }
 
     private void avoidWall(){
@@ -254,20 +264,17 @@ public class Korven extends AdvancedRobot
         System.out.println(location);
     }
 
-    private void turnToMiddle(boolean instantTurn){
+    private void turnToMiddle(){
         double dx = (getBattleFieldWidth()/2) - getX();
         double dy = (getBattleFieldHeight()/2) - getY();
 
         Vector2D toMiddle = new Vector2D(dx,dy);
-        Vector2D heading = new Vector2D(Math.cos(-(getHeadingRadians()+(Math.PI/2))), Math.sin(-(getHeadingRadians()+(Math.PI/2))));
+        Vector2D heading = new Vector2D(Math.signum(getVelocity())*100*Math.cos(-(getHeadingRadians()+(Math.PI/2))),
+                Math.signum(getVelocity())*100*Math.sin(-(getHeadingRadians()+(Math.PI/2))));
 
         System.out.println("Degrees: " + toMiddle.minAngle(heading) + " Heading vector: " + heading);
 
-        if(instantTurn){
-            turnRight(toMiddle.minAngle(heading));
-        }else{
-            setTurnRight(Vector2D.minAngle(toMiddle, heading));
-        }
+            setTurnRight(toMiddle.minAngle(heading));
     }
 
     private double getDistanceToWall(){
@@ -295,3 +302,22 @@ public class Korven extends AdvancedRobot
         //If there are many hits, you can shoot further
     }
 }
+
+/*
+MIKAELS ROBOTSKOLA!
+
+kolla KD-Tree !!!!!!!!
+Iterera vapen
+Bygga om knuth morris pratt algo till vapensystem
+Wall-smoothing
+ */
+
+/*
+double d = 0;
+if(distanceToWall < WALL_LIMIT){
+    setTurnRight(90);
+    if(d < distanceToWall){
+    setTurnLeft(90);
+    }
+   }
+ */

@@ -72,6 +72,12 @@ public class Vector2D
         return Math.acos((dot(a,b)/(a.length()*b.length())));
     }
 
+    public void paintVector(Graphics2D g, double startX, double startY){
+        g.setColor(Color.green);
+        g.setStroke(new BasicStroke(2));
+        g.drawLine((int)startX, (int)startY, (int)(startX + x), (int)(startY + y));
+    }
+
     @Override
     public String toString(){
         return "[" + x + ";" + y + "]";
