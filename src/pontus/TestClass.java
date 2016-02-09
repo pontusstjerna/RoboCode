@@ -16,7 +16,9 @@ public class TestClass {
 
     private void testVector(){
         Vector2D a = new Vector2D(1,0);
-        Vector2D b = new Vector2D(0,1);
+        Vector2D b = new Vector2D(0,-1);
+        Vector2D c = new Vector2D(-1,0);
+        Vector2D d = new Vector2D(-5,1);
 
         System.out.println(a.dot(b) == 0);
         System.out.println(a.minAngle(b) == 90);
@@ -26,5 +28,9 @@ public class TestClass {
         System.out.println(b.length() == 1);
         System.out.println(Vector2D.getLength(a) == 1);
         System.out.println(Vector2D.getLength(b) == 1);
+        System.out.println(a.getHeading() == 90);
+        System.out.println(b.getHeading() == 0);
+        System.out.println(c.getHeading() == -90);
+        System.out.println(d.getHeading());
     }
 }

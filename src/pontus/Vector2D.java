@@ -72,10 +72,23 @@ public class Vector2D
         return Math.acos((dot(a,b)/(a.length()*b.length())));
     }
 
-    public void paintVector(Graphics2D g, double startX, double startY){
-        g.setColor(Color.green);
+    public void paintVector(Graphics2D g, double startX, double startY, Color color){
+        g.setColor(color);
         g.setStroke(new BasicStroke(2));
         g.drawLine((int)startX, (int)startY, (int)(startX + x), (int)(startY + y));
+    }
+
+    public double getHeading(){
+        return Math.toDegrees(Math.atan2(x, y));
+    }
+
+    public double getHeadingRadians(){
+        return Math.atan2(x,y);
+    }
+
+    public static Vector2D getHeadingVector(double headingRadians, double length, double velocity){
+        return new Vector2D(Math.signum(velocity) * -length * Math.cos(-(headingRadians + (Math.PI / 2))),
+                Math.signum(velocity) * -length * Math.sin(-(headingRadians + (Math.PI / 2))));
     }
 
     @Override
