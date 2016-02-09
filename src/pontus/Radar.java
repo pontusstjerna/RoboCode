@@ -20,4 +20,8 @@ public class Radar {
     public double getRadarBearing(ScannedRobotEvent e) {
         return e.getBearing() - (korven.get180(korven.getRadarHeading() - korven.get180(korven.getHeading())));
     }
+
+    public static double getRadarBearing(ScannedRobotEvent e, Korven korv) {
+        return e.getBearing() - (korv.get180(korv.getRadarHeading() - korv.get180(korv.getHeading())));
+    }
 }

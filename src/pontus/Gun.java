@@ -12,13 +12,16 @@ public class Gun {
     private Korven korven;
     private static final double AIM_LIMIT = 2;
     private Vector2D toEnemy;
+    private Vector2D enemyPath;
+    private Vector2D toHitPoint;
+    private double deltaAngle = 180;
 
     public Gun(Korven korven){
         this.korven = korven;
     }
 
     public void lockToRadar(){
-        double deltaAngle = korven.getRadarHeading() - korven.getGunHeading();
+        deltaAngle = korven.getRadarHeading() - korven.getGunHeading();
         if(deltaAngle < 180 && deltaAngle > -180){
             korven.setTurnGunRight(deltaAngle);
         }else if(deltaAngle > 180){
@@ -28,37 +31,48 @@ public class Gun {
         }
     }
 
-    public void lockAndFire(ScannedRobotEvent e) {
+    public void lockToEnemy(ScannedRobotEvent e){
+        //double deltaAngle = korven.getRadarHeading() - korven.getGunHeading();
         double distance = e.getDistance();
-        double deltaAngle = korven.getRadarHeading() - korven.getGunHeading();
+        double enemyVel = e.getVelocity();
+        double firePower = 3 - 3 * distance / korven.getMaxDistance();
+        double bulletSpeed = 20 - 3 * firePower;
 
         toEnemy = Vector2D.getHeadingVector(korven.getRadarHeadingRadians(), e.getDistance(), 1);
+        enemyPath = Vector2D.getHeadingVector(e.getHeadingRadians(), (e.getDistance()*enemyVel)/bulletSpeed, 1);
+        toHitPoint = Vector2D.add(toEnemy, enemyPath);
 
-        if (deltaAngle < AIM_LIMIT && deltaAngle > -AIM_LIMIT && korven.closeEnough(distance)) {
-            double eSpeed = e.getVelocity();
-            double firePower = 3 - 3 * distance / korven.getMaxDistance();
-            double bulletSpeed = 20 - 3 * firePower;
-            double eRevHead = e.getHeadingRadians() - korven.getGunHeadingRadians();
-            double bulletDistance = Math.sqrt(Math.pow(distance, 2) +
-                    Math.pow(((distance * eSpeed) / bulletSpeed), 2) -
-                    2 * distance * ((distance * eSpeed) / bulletSpeed) * Math.cos(eRevHead));
-            double angle = distance / bulletDistance;
-            //System.out.println("Degrees: " + Math.acos(angle));
+        double additional = e.getDistance()*0.0025*e.getVelocity();
 
-            //Bullet velocity:	20 - 3 * firepower.
-            if (bulletDistance != 0 && bulletDistance < korven.getMaxDistance()) {
-                korven.setTurnGunRightRadians(Math.acos(angle) + angle * 0.1f);
-            }
+        deltaAngle = toHitPoint.getHeading() - (korven.getGunHeading() - additional);
+
+        if(deltaAngle < 180 && deltaAngle > -180){
+            korven.setTurnGunRight(deltaAngle);
+        }else if(deltaAngle > 180){
+            korven.setTurnGunRight(360 - deltaAngle);
+        }else{
+            korven.setTurnGunRight(360 + deltaAngle);
+        }
+    }
+
+    public void fire(ScannedRobotEvent e) {
+        double distance = e.getDistance();
+        //double deltaAngle = korven.getRadarHeading() - korven.getGunHeading();
+        double firePower = 3 - 3 * distance / korven.getMaxDistance();
+
+        if ((korven.closeEnough(distance*1.5) || e.getVelocity() < 2) && deltaAngle < AIM_LIMIT && deltaAngle > -AIM_LIMIT) {
             Bullet bullet = (korven.setFireBullet(firePower));
             korven.addBullet(bullet, e);
         }else{
-            lockToRadar();
+            lockToEnemy(e);
         }
     }
 
     public void paintGun(Graphics2D g){
-        if(toEnemy != null){
+        if(enemyPath != null && toEnemy != null){
+            enemyPath.paintVector(g, korven.getX() + toEnemy.getX(), korven.getY() + toEnemy.getY(), Color.RED);
             toEnemy.paintVector(g, korven.getX(), korven.getY(), Color.RED);
+            toHitPoint.paintVector(g, korven.getX(), korven.getY(), Color.CYAN);
         }
     }
 }

@@ -91,6 +91,10 @@ public class Vector2D
                 Math.signum(velocity) * -length * Math.sin(-(headingRadians + (Math.PI / 2))));
     }
 
+    public static Vector2D add(Vector2D a, Vector2D b){
+        return new Vector2D(a.getX() + b.getX(), a.getY() + b.getY());
+    }
+
     @Override
     public String toString(){
         return "[" + x + ";" + y + "]";
