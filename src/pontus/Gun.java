@@ -10,11 +10,13 @@ import java.awt.*;
  */
 public class Gun {
     private Korven korven;
-    private static final double AIM_LIMIT = 2;
+    private static final double AIM_LIMIT = 0.5f;
     private Vector2D toEnemy;
     private Vector2D enemyPath;
     private Vector2D toHitPoint;
     private double deltaAngle = 180;
+    private double firePower = 0;
+    private double additional = 0;
 
     public Gun(Korven korven){
         this.korven = korven;
@@ -35,16 +37,17 @@ public class Gun {
         //double deltaAngle = korven.getRadarHeading() - korven.getGunHeading();
         double distance = e.getDistance();
         double enemyVel = e.getVelocity();
-        double firePower = 3 - 3 * distance / korven.getMaxDistance();
+        firePower = 3 - 3 * distance / korven.getMaxDistance();
         double bulletSpeed = 20 - 3 * firePower;
 
         toEnemy = Vector2D.getHeadingVector(korven.getRadarHeadingRadians(), e.getDistance(), 1);
-        enemyPath = Vector2D.getHeadingVector(e.getHeadingRadians(), (e.getDistance()*enemyVel)/bulletSpeed, 1);
+        enemyPath = Vector2D.getHeadingVector(e.getHeadingRadians(), (e.getDistance()*enemyVel/bulletSpeed) +
+                distance*0.18*Math.abs(e.getVelocity())/8, 1);
         toHitPoint = Vector2D.add(toEnemy, enemyPath);
 
-        double additional = e.getDistance()*0.0025*e.getVelocity();
+        deltaAngle = toHitPoint.getHeading() - korven.getGunHeading();
 
-        deltaAngle = toHitPoint.getHeading() - (korven.getGunHeading() - additional);
+        //additional = e.getDistance()*0.024*Math.signum(deltaAngle);
 
         if(deltaAngle < 180 && deltaAngle > -180){
             korven.setTurnGunRight(deltaAngle);
@@ -58,9 +61,9 @@ public class Gun {
     public void fire(ScannedRobotEvent e) {
         double distance = e.getDistance();
         //double deltaAngle = korven.getRadarHeading() - korven.getGunHeading();
-        double firePower = 3 - 3 * distance / korven.getMaxDistance();
 
-        if ((korven.closeEnough(distance*1.5) || e.getVelocity() < 2) && deltaAngle < AIM_LIMIT && deltaAngle > -AIM_LIMIT) {
+        if ((korven.closeEnough(distance*1.5) || e.getVelocity() < 2) &&
+                deltaAngle < AIM_LIMIT && deltaAngle > -AIM_LIMIT && e.getEnergy() != 0 || korven.inPerfectRange()) {
             Bullet bullet = (korven.setFireBullet(firePower));
             korven.addBullet(bullet, e);
         }else{

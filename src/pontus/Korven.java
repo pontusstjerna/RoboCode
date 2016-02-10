@@ -15,15 +15,16 @@ import java.util.Random;
 public class Korven extends AdvancedRobot {
     private int dir = 1; // 1 = right, -1 = left
     private Random rand;
-    private static final int MAX_DISTANCE = 400;
-    private static final int MIN_DISTANCE = 100;
+    private static final int MAX_DISTANCE = 300;
+    private static final int MIN_DISTANCE = 200;
     private double eEnergy = 0;
-    private static final double WALL_LIMIT = 150;
+    private static final double WALL_LIMIT = 100;
     private double adjust = 1;
     private int shotsFired = 0;
     private List<BulletData> bullets = new ArrayList<>();
     private List<BulletData> eData = new ArrayList<>();
     private boolean locked = false;
+    private boolean perfectRange = false;
 
     private Radar radar;
     private Gun gun;
@@ -85,7 +86,7 @@ public class Korven extends AdvancedRobot {
 
     @Override
     public void onHitWall(HitWallEvent e) {
-        //setTurnRight(angleToMiddle());
+        dir = -dir;
         setAhead(2*WALL_LIMIT*dir);
     }
 
@@ -117,22 +118,24 @@ public class Korven extends AdvancedRobot {
     }
 
     private void keepDistance(ScannedRobotEvent e) {
-        setMaxVelocity(8);
-        if (e.getDistance() > MAX_DISTANCE && getDistanceToWall() > WALL_LIMIT || e.getEnergy() == 0) {
-            setTurnRight(e.getBearing()*dir - 20);
-        } else if(e.getDistance() < MAX_DISTANCE && e.getDistance() > MIN_DISTANCE){
-            if (getDistanceToWall() > WALL_LIMIT) {
+        perfectRange = false;
+        if(getDistanceToWall() > WALL_LIMIT || e.getEnergy() == 0){ //If not close to any wall
+            setMaxVelocity(8);
+            if(e.getDistance() > MAX_DISTANCE || e.getEnergy() == 0){ //If too far away or disabled
+                setTurnRight(e.getBearing()*dir - 20);
+            }else if(e.getDistance() < MIN_DISTANCE){ //If too close to the enemy
+                setTurnRight(e.getBearing()*dir - 160);
+            }else{ //If in the perfect distance interval
+                perfectRange = true;
                 setTurnRight((e.getBearing() - 90 * adjust));
-            } else {
-                if(angleToMiddle() > 90 || angleToMiddle() < -90){
-                    setMaxVelocity(8 - 7*(1/getDistanceToWall()));
-                }
-                setTurnRight(angleToMiddle());
             }
-        }else{
-            //TURN BACK!!
+        }else{ //Turn to middle!
+            if(angleToMiddle() > 90 || angleToMiddle() < -90){ //If too close, break
+                setMaxVelocity(8 - 7*(1/getDistanceToWall()));
+            }
+            setTurnRight(angleToMiddle());
         }
-        setAhead((rand.nextInt(200) + 70) * dir);
+        setAhead((rand.nextInt(200) + 70) * dir); //Always move!
     }
 
     private void avoid(ScannedRobotEvent e) {
@@ -184,6 +187,10 @@ public class Korven extends AdvancedRobot {
             bullets.add(new BulletData(bullet, getRadarHeading(), getX(), getY(), e));
             shotsFired++;
         }
+    }
+
+    public boolean inPerfectRange(){
+        return perfectRange;
     }
 }
 
