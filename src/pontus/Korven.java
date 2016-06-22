@@ -58,9 +58,9 @@ public class Korven extends AdvancedRobot {
     @Override
     public void onScannedRobot(ScannedRobotEvent e) {
         radar.lock(e);
+        gun.fire(e);
         gun.lockToEnemy(e);
         locked = true;
-        gun.fire(e);
         keepDistance(e);
         avoid(e);
     }

@@ -15,7 +15,7 @@ public class Gun {
     private Vector2D enemyPath;
     private Vector2D toHitPoint;
     private double deltaAngle = 180;
-    private double firePower = 0;
+    private double firePower = 3;
     private double additional = 0;
 
     public Gun(Korven korven){
@@ -37,20 +37,22 @@ public class Gun {
         //double deltaAngle = korven.getRadarHeading() - korven.getGunHeading();
         double distance = e.getDistance();
         double enemyVel = e.getVelocity();
-        firePower = 3 - 3 * distance / korven.getMaxDistance();
+        //firePower = 3 - 3 * distance / korven.getMaxDistance();
         double bulletSpeed = 20 - 3 * firePower;
 
         toEnemy = Vector2D.getHeadingVector(korven.getRadarHeadingRadians(), e.getDistance(), 1);
-        enemyPath = Vector2D.getHeadingVector(e.getHeadingRadians(), (e.getDistance()*enemyVel/bulletSpeed) +
-                distance*0.18*Math.abs(e.getVelocity())/8, 1);
+        enemyPath = Vector2D.getHeadingVector(e.getHeadingRadians(), (e.getDistance()*enemyVel/bulletSpeed), 1);
         toHitPoint = Vector2D.add(toEnemy, enemyPath);
 
-        deltaAngle = toHitPoint.getHeading() - korven.getGunHeading();
+        deltaAngle = korven.get180(toHitPoint.getHeading() - korven.getGunHeading());
+
+
 
         //additional = e.getDistance()*0.024*Math.signum(deltaAngle);
 
         if(deltaAngle < 180 && deltaAngle > -180){
             korven.setTurnGunRight(deltaAngle);
+            System.out.println("DeltaAngle: " + deltaAngle);
         }else if(deltaAngle > 180){
             korven.setTurnGunRight(360 - deltaAngle);
         }else{
@@ -58,17 +60,25 @@ public class Gun {
         }
     }
 
+    long fireTime = 0;
     public void fire(ScannedRobotEvent e) {
         double distance = e.getDistance();
         //double deltaAngle = korven.getRadarHeading() - korven.getGunHeading();
 
+        if(fireTime == korven.getTime() && korven.getGunTurnRemaining() == 0){
+            Bullet bullet = (korven.setFireBullet(firePower));
+            korven.addBullet(bullet, e);
+        }
+
+        fireTime = korven.getTime() + 1;
+/*
         if ((korven.closeEnough(distance*1.5) || e.getVelocity() < 2) &&
                 deltaAngle < AIM_LIMIT && deltaAngle > -AIM_LIMIT && e.getEnergy() != 0 || korven.inPerfectRange()) {
             Bullet bullet = (korven.setFireBullet(firePower));
             korven.addBullet(bullet, e);
         }else{
             lockToEnemy(e);
-        }
+        }*/
     }
 
     public void paintGun(Graphics2D g){
