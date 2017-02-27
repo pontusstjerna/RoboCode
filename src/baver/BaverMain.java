@@ -1,13 +1,13 @@
 package baver;
 
-import robocode.AdvancedRobot;
-import robocode.HitByBulletEvent;
-import robocode.HitWallEvent;
-import robocode.ScannedRobotEvent;
+import robocode.*;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
+import static robocode.Rules.RADAR_SCAN_RADIUS;
 
 
 /**
@@ -17,7 +17,7 @@ public class BaverMain extends AdvancedRobot {
 
     private Radar radar;
 
-    private final int LOCK_TIMEOUT = 30;
+    private final int LOCK_TIMEOUT = 60;
     private int lockTicks = LOCK_TIMEOUT;
     private double oldEnemyEnergy;
 
@@ -43,7 +43,7 @@ public class BaverMain extends AdvancedRobot {
                 lockTicks++;
             }
 
-            shots.stream().filter(s -> s.isInAir()).forEach(s -> s.addTick());
+            shots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.addTick());
 
             execute();
         }
@@ -57,12 +57,23 @@ public class BaverMain extends AdvancedRobot {
 
     @Override
     public void onHitByBullet(HitByBulletEvent e) {
-
+        if(shots.stream().filter(s -> e.getTime() == s.getTime()).findFirst().isPresent())
+            shots.stream().filter(s -> e.getTime() == s.getTime()).findFirst().get().setHit(true, e.getBullet());
+        else {
+            System.out.println("Unregistered shot hit!");
+            shots.add(new Shot(e));
+        }
     }
 
     @Override
     public void onHitWall(HitWallEvent e) {
 
+    }
+
+    @Override
+    public void onDeath(DeathEvent e){
+        System.out.println("Shots hit: " + shots.stream().filter(s -> s.getState() == Shot.states.HIT).count());
+        System.out.println("Shots missed: " + shots.stream().filter(s -> s.getState() == Shot.states.MISS).count());
     }
 
     @Override
@@ -72,15 +83,11 @@ public class BaverMain extends AdvancedRobot {
 
     private void detectShot(ScannedRobotEvent e){
         if(e.getEnergy() < oldEnemyEnergy){
-            registerShot(e);
+            System.out.println("Shot registered. Shots: " + shots.size());
+            shots.add(new Shot(e));
         }
 
         oldEnemyEnergy = e.getEnergy();
-    }
-
-    private void registerShot(ScannedRobotEvent e){
-        System.out.println("Shot registered. Shots: " + shots.size());
-        shots.add(new Shot(e.getBearing(), e.getVelocity(), e.getDistance()));
     }
 
     double get180(double angle) {

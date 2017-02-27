@@ -1,6 +1,7 @@
 package baver;
 
 import robocode.Bullet;
+import robocode.HitByBulletEvent;
 import robocode.ScannedRobotEvent;
 
 /**
@@ -8,19 +9,31 @@ import robocode.ScannedRobotEvent;
  */
 public class Shot {
 
+    public enum states {IN_AIR, HIT, MISS}
+
     private final int IN_AIR_TIMEOUT = 150; //5 sec @ 30 tps
-    private enum states {IN_AIR, HIT, MISS}
     private states state;
 
-    private double bearing, velocity, distance;
+    private double bearing, velocity;
+    private double distance = -1;
     private Bullet bullet = null;
     private int alive = 0;
+    private long firedTime = 0;
 
-    public Shot(double bearing, double velocity, double distance){
+    public Shot(ScannedRobotEvent e){
         state = states.IN_AIR;
-        this.bearing = bearing;
-        this.velocity = velocity;
-        this.distance = distance;
+        bearing = e.getBearing();
+        velocity = e.getVelocity();
+        distance = e.getDistance();
+        firedTime = e.getTime();
+    }
+
+    public Shot(HitByBulletEvent e){
+        state = states.HIT;
+        bearing = e.getBearing();
+        velocity = e.getVelocity();
+        distance = -1;
+        bullet = e.getBullet();
     }
 
     public void setHit(boolean bulletHit, Bullet b){
@@ -42,11 +55,23 @@ public class Shot {
         return distance;
     }
 
-    public boolean isInAir(){
-        return state == states.IN_AIR;
+    states getState(){
+        return state;
     }
 
-    public void addTick(){
+    void addTick(){
         alive++;
+
+        if(alive > IN_AIR_TIMEOUT){
+            state = states.MISS;
+        }
+    }
+
+    int getTimeAlive(){
+        return alive;
+    }
+
+    long getTime(){
+        return firedTime + alive;
     }
 }
