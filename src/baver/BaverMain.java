@@ -6,6 +6,9 @@ import robocode.HitWallEvent;
 import robocode.ScannedRobotEvent;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
  * Created by pontu on 2017-02-26.
@@ -16,6 +19,9 @@ public class BaverMain extends AdvancedRobot {
 
     private final int LOCK_TIMEOUT = 30;
     private int lockTicks = LOCK_TIMEOUT;
+    private double oldEnemyEnergy;
+
+    private List<Shot> shots;
 
     @Override
     public void run(){
@@ -28,6 +34,7 @@ public class BaverMain extends AdvancedRobot {
         setAdjustGunForRobotTurn(true);
 
         radar = new Radar(this);
+        shots = new ArrayList<>();
 
         while (true) {
             if(lockTicks >= LOCK_TIMEOUT) {
@@ -36,6 +43,8 @@ public class BaverMain extends AdvancedRobot {
                 lockTicks++;
             }
 
+            shots.stream().filter(s -> s.isInAir()).forEach(s -> s.addTick());
+
             execute();
         }
     }
@@ -43,11 +52,12 @@ public class BaverMain extends AdvancedRobot {
     @Override
     public void onScannedRobot(ScannedRobotEvent e) {
         radar.lockOnTarget(e);
+        detectShot(e);
     }
 
     @Override
     public void onHitByBullet(HitByBulletEvent e) {
-        // Replace the next line with any behavior you would like
+
     }
 
     @Override
@@ -58,6 +68,19 @@ public class BaverMain extends AdvancedRobot {
     @Override
     public void onPaint(Graphics2D g) {
 
+    }
+
+    private void detectShot(ScannedRobotEvent e){
+        if(e.getEnergy() < oldEnemyEnergy){
+            registerShot(e);
+        }
+
+        oldEnemyEnergy = e.getEnergy();
+    }
+
+    private void registerShot(ScannedRobotEvent e){
+        System.out.println("Shot registered. Shots: " + shots.size());
+        shots.add(new Shot(e.getBearing(), e.getVelocity(), e.getDistance()));
     }
 
     double get180(double angle) {

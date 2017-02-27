@@ -6,7 +6,8 @@ import robocode.ScannedRobotEvent;
  * Created by pontu on 2017-02-26.
  */
 public class Radar {
-    BaverMain main;
+    private BaverMain main;
+
 
     public Radar(BaverMain baverMain){
         main = baverMain;
