@@ -11,7 +11,7 @@ public class Shot {
 
     public enum states {IN_AIR, HIT, MISS}
 
-    private final int IN_AIR_TIMEOUT = 150; //5 sec @ 30 tps
+    private final int IN_AIR_TIMEOUT = 60; //2 sec @ 30 tps
     private states state;
 
     private double bearing, velocity;
@@ -53,6 +53,18 @@ public class Shot {
 
     public double getDistance(){
         return distance;
+    }
+
+    public Bullet getBullet() {return bullet; }
+
+    public double getDistance(Shot shot){
+        double dBearing = getBearing() - shot.getBearing();
+        double dVelocity = getVelocity() - shot.getVelocity();
+        double dDistance = 0;
+        if(distance != -1 && shot.getDistance() != -1)
+            dDistance = distance - shot.getDistance();
+
+        return Math.sqrt(dBearing*dBearing + dVelocity*dVelocity + dDistance*dDistance);
     }
 
     states getState(){
