@@ -4,10 +4,13 @@ import robocode.Bullet;
 import robocode.HitByBulletEvent;
 import robocode.ScannedRobotEvent;
 
+import java.awt.geom.Point2D;
+import java.io.Serializable;
+
 /**
  * Created by pontu on 2017-02-27.
  */
-public class Shot {
+public class Shot implements Serializable{
 
     public enum states {IN_AIR, HIT, MISS}
 
@@ -19,13 +22,19 @@ public class Shot {
     private Bullet bullet = null;
     private int alive = 0;
     private long firedTime = 0;
+    private Point2D.Double enemyPointOfFire;
+    private Point2D.Double robotPointOfFire;
+    private double robotVelocity;
 
-    public Shot(ScannedRobotEvent e){
+    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, BaverMain robot){
         state = states.IN_AIR;
         bearing = e.getBearing();
         velocity = e.getVelocity();
         distance = e.getDistance();
         firedTime = e.getTime();
+        enemyPointOfFire = enemyPos;
+        robotPointOfFire = new Point2D.Double(robot.getX(), robot.getY());
+        robotVelocity = robot.getVelocity();
     }
 
     public Shot(HitByBulletEvent e){
@@ -57,14 +66,23 @@ public class Shot {
 
     public Bullet getBullet() {return bullet; }
 
+    public Point2D.Double getEnemyPointOfFire(){
+        return enemyPointOfFire;
+    }
+
+    public Point2D.Double getRobotPointOfFire(){
+        return robotPointOfFire;
+    }
+
     public double getDistance(Shot shot){
         double dBearing = getBearing() - shot.getBearing();
         double dVelocity = getVelocity() - shot.getVelocity();
         double dDistance = 0;
         if(distance != -1 && shot.getDistance() != -1)
             dDistance = distance - shot.getDistance();
+        double dRobVel = robotVelocity - shot.robotVelocity;
 
-        return Math.sqrt(dBearing*dBearing + dVelocity*dVelocity + dDistance*dDistance);
+        return Math.sqrt(dBearing*dBearing + dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel);
     }
 
     states getState(){
