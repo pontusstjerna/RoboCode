@@ -45,11 +45,18 @@ public class Shot implements Serializable{
         bullet = e.getBullet();
     }
 
-    public void setHit(boolean bulletHit, Bullet b){
-        if(bulletHit)
-            state = states.HIT;
-
+    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, BaverMain robot, Bullet b){
+        this(e, enemyPos, robot);
         bullet = b;
+    }
+
+    public void setHit(Bullet b){
+        setHit();
+        bullet = b;
+    }
+
+    public void setHit(){
+        state = states.HIT;
     }
 
     public double getBearing(){
@@ -89,11 +96,15 @@ public class Shot implements Serializable{
         return state;
     }
 
-    void addTick(){
+    void update(){
         alive++;
 
         if(alive > IN_AIR_TIMEOUT){
-            state = states.MISS;
+            if(bullet != null){
+                if(bullet.getVictim().isEmpty())
+                    state = states.MISS;
+            }else
+                state = states.MISS;
         }
     }
 

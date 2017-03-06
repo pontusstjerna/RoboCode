@@ -23,7 +23,7 @@ public class BaverMain extends AdvancedRobot {
     private final int LOCK_TIMEOUT = 60;
     private static final int MAX_DISTANCE = 400;
     private static final int MIN_DISTANCE = 100;
-    private static final double WALL_LIMIT = 100;
+    private static final double WALL_LIMIT = 200;
 
     private int lockTicks = LOCK_TIMEOUT;
     private int dir = 1;
@@ -32,7 +32,8 @@ public class BaverMain extends AdvancedRobot {
     private Point2D.Double enemyPos = new Point2D.Double();
     private Random rand;
 
-    private List<Shot> shots;
+    private List<Shot> enemyShots;
+    private List<Shot> firedShots;
 
     @Override
     public void run() {
@@ -46,7 +47,8 @@ public class BaverMain extends AdvancedRobot {
 
         radar = new Radar(this);
         gun = new Gun(this);
-        shots = loadPreviousShots();
+        enemyShots = loadPreviousShots();
+        firedShots = new ArrayList<>();
         rand = new Random();
 
         while (true) {
@@ -56,7 +58,7 @@ public class BaverMain extends AdvancedRobot {
                 lockTicks++;
             }
 
-            shots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.addTick());
+            enemyShots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.update());
 
             execute();
         }
@@ -65,28 +67,29 @@ public class BaverMain extends AdvancedRobot {
     @Override
     public void onScannedRobot(ScannedRobotEvent e) {
         radar.lockOnTarget(e);
-        if (detectShot(e))
+        if (detectShot(e) && getDistanceToWall() > WALL_LIMIT)
             dodgeBullet();
 
         updateEnemyPos(e);
         //avoidWalls(e);
         //setTurnRight((e.getBearing() - 90));
         keepDistance(e);
-        gun.fire(e);
+        registerShot(gun.fire(e), e);
+
         gun.lockToEnemy(e);
 
-        shots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.addTick());
+        enemyShots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.update());
 
         scan();
     }
 
     @Override
     public void onHitByBullet(HitByBulletEvent e) {
-        if (shots.stream().filter(s -> e.getTime() == s.getTime()).findFirst().isPresent())
-            shots.stream().filter(s -> e.getTime() == s.getTime()).findFirst().get().setHit(true, e.getBullet());
+        if (enemyShots.stream().filter(s -> e.getTime() == s.getTime()).findFirst().isPresent())
+            enemyShots.stream().filter(s -> e.getTime() == s.getTime()).findFirst().get().setHit(e.getBullet());
         else {
             System.out.println("Unregistered shot hit!");
-            //   shots.add(new Shot(e));
+            //   enemyShots.add(new Shot(e));
         }
     }
 
@@ -97,18 +100,18 @@ public class BaverMain extends AdvancedRobot {
 
     @Override
     public void onDeath(DeathEvent e) {
-        System.out.println("Shots hit: " + shots.stream().filter(s -> s.getState() == Shot.states.HIT).count());
-        System.out.println("Shots missed: " + shots.stream().filter(s -> s.getState() == Shot.states.MISS).count());
+        System.out.println("Shots hit: " + enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT).count());
+        System.out.println("Shots missed: " + enemyShots.stream().filter(s -> s.getState() == Shot.states.MISS).count());
 
         //Remove missed
         List toRemove = new ArrayList<>();
-        shots.stream().filter(s -> s.getState() == Shot.states.MISS).forEach(s -> toRemove.add(s));
-        shots.removeAll(toRemove);
+        enemyShots.stream().filter(s -> s.getState() == Shot.states.MISS).forEach(s -> toRemove.add(s));
+        enemyShots.removeAll(toRemove);
 
         try {
-            RobocodeFileOutputStream fout = new RobocodeFileOutputStream(getDataFile("shots"));
+            RobocodeFileOutputStream fout = new RobocodeFileOutputStream(getDataFile("enemyShots"));
             ObjectOutputStream oos = new ObjectOutputStream(fout);
-            oos.writeObject(shots);
+            oos.writeObject(enemyShots);
             fout.close();
             oos.close();
 
@@ -123,11 +126,17 @@ public class BaverMain extends AdvancedRobot {
     public void onPaint(Graphics2D g) {
         g.setColor(new Color(255, 0, 0));
 
-        if (shots.size() == 0)
+        if (enemyShots.size() == 0)
             return;
 
-        Point2D.Double b = getExpectedImpact(shots.get(shots.size() - 1));
+        Point2D.Double b = getExpectedImpact(enemyShots.get(enemyShots.size() - 1));
         g.fillRoundRect((int) b.getX(), (int) b.getY(), 10, 10, 10, 10);
+
+        Vector2D rb = new Vector2D(b.getX() - getX(), b.getY() - getY());
+        double bearing = Util.get180(Util.get180(getHeading()) - Util.get180(rb.getHeading()));
+        g.drawString("Bearing to avoidance: " + bearing, 10, 10);
+        g.drawString("Robot heading: " + getHeading(), 10, 20);
+        g.drawString("Avoidance heading: " + rb.getHeading(), 10, 30);
 
         g.setColor(new Color(22, 31, 255));
         g.fillRoundRect((int) enemyPos.getX(), (int) enemyPos.getY(), 5, 5, 5, 5);
@@ -139,9 +148,9 @@ public class BaverMain extends AdvancedRobot {
         boolean fired = e.getEnergy() < oldEnemyEnergy;
 
         if (fired) {
-            System.out.println("Shot registered. Shots: " + shots.size());
+            System.out.println("Shot registered. Shots: " + enemyShots.size());
             Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), this);
-            shots.add(shot);
+            enemyShots.add(shot);
         }
 
         oldEnemyEnergy = e.getEnergy();
@@ -150,32 +159,26 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private void dodgeBullet() {
-        if (shots.size() == 0)
+        if (enemyShots.size() == 0)
             return;
 
-        Point2D.Double b = getExpectedImpact(shots.get(shots.size() - 1));
+        Point2D.Double b = getExpectedImpact(enemyShots.get(enemyShots.size() - 1));
 
-        Vector2D rb = new Vector2D(b.getX(), b.getY());
-        double bearing = Util.get180(getHeading() - rb.getHeading());
+        Vector2D rb = new Vector2D(b.getX() - getX(), b.getY() - getY());
+        double bearing = Util.get180(Util.get180(getHeading()) - Util.get180(rb.getHeading()));
 
         if (bearing < 90 && bearing >= -90)
             dir = -1;
         else
             dir = 1;
+
+        setAhead(dir*getHeight()*2);
     }
 
-    private void avoidWalls(ScannedRobotEvent e) {
-        double distanceToWall = getDistanceToWall();
+    private void registerShot(Bullet b, ScannedRobotEvent e){
+        if(b == null) return;
 
-        if (distanceToWall < WALL_LIMIT || e.getEnergy() == 0) { //Turn to middle!
-            /*if(getAngleToMiddle() > 90 || getAngleToMiddle() < -90){ //If too close, break
-                setMaxVelocity(8 - 7*(1/getDistanceToWall()));
-            }*/
 
-            setMaxVelocity(8 - 7 * (1 / getDistanceToWall()));
-            setTurnRight(getAngleToMiddle());
-            setAhead(WALL_LIMIT * dir);
-        }
     }
 
     private void keepDistance(ScannedRobotEvent e) {
@@ -189,12 +192,15 @@ public class BaverMain extends AdvancedRobot {
                 setTurnRight((e.getBearing() - 90));
             }
         } else { //Turn to middle!
-            if (getAngleToMiddle() > 90 || getAngleToMiddle() < -90) { //If too close, break
-                setMaxVelocity(8 - 7 * (1 / getDistanceToWall()));
-            }
+            if (getAngleToMiddle() > 90 && getAngleToMiddle() < -90) { //If too close, break
+                //setMaxVelocity(8 - 7 * (1 / getDistanceToWall()));
+                dir = -1;
+            }else
+                dir = 1;
             setTurnRight(getAngleToMiddle());
+            setAhead(WALL_LIMIT);
         }
-        setAhead((rand.nextInt(200) + 70) * dir);
+       // setAhead((rand.nextInt(200) + 70) * dir);
     }
 
     private void updateEnemyPos(ScannedRobotEvent e) {
@@ -207,7 +213,7 @@ public class BaverMain extends AdvancedRobot {
     private Shot getBestMatchedShot(Shot shot) {
         Shot closest;
 
-        List<Shot> hitShots = shots.stream().filter(s -> s.getState() == Shot.states.HIT).collect(Collectors.toList());
+        List<Shot> hitShots = enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT).collect(Collectors.toList());
 
         if (hitShots.size() > 0)
             closest = hitShots.get(0);
@@ -277,12 +283,12 @@ public class BaverMain extends AdvancedRobot {
 
         if (getRoundNum() > 0) {
             try {
-                FileInputStream fout = new FileInputStream(getDataFile("shots"));
+                FileInputStream fout = new FileInputStream(getDataFile("enemyShots"));
                 ObjectInputStream ois = new ObjectInputStream(fout);
                 shots = (List<Shot>) ois.readObject();
                 fout.close();
                 ois.close();
-                System.out.println(shots.size() + " shots successfully loaded.");
+                System.out.println(shots.size() + " enemyShots successfully loaded.");
             } catch (Exception e) {
                 e.printStackTrace();
             }

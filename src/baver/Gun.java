@@ -17,7 +17,7 @@ public class Gun {
     private Vector2D enemyPath;
     private Vector2D toHitPoint;
     private double deltaAngle = 180;
-    private double firePower = 1;
+    private double firePower = 3;
     private double additional = 0;
 
     public Gun(AdvancedRobot robot){
@@ -49,10 +49,12 @@ public class Gun {
         }
     }
 
-    public void fire(ScannedRobotEvent e) {
-        if(robot.getGunTurnRemaining() < 3 && robot.getGunHeat() == 0){
-            robot.setFireBullet(firePower);
+    public Bullet fire(ScannedRobotEvent e) {
+        if(robot.getGunTurnRemaining() < 0.5 && robot.getGunHeat() == 0){
+            return robot.setFireBullet(firePower);
         }
+
+        return null;
     }
 
     public void paintGun(Graphics2D g){
