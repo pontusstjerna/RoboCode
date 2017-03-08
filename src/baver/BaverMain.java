@@ -18,7 +18,8 @@ import java.util.stream.Collectors;
 public class BaverMain extends AdvancedRobot {
 
     private Radar radar;
-    private Gun gun;
+    private AngleGun angleGun;
+    private LearningGun learningGun;
 
     private final int LOCK_TIMEOUT = 60;
     private static final int MAX_DISTANCE = 400;
@@ -33,22 +34,21 @@ public class BaverMain extends AdvancedRobot {
     private Random rand;
 
     private List<Shot> enemyShots;
-    private List<Shot> firedShots;
 
     @Override
     public void run() {
         setColors(new Color(255, 196, 13),
                 new Color(29, 29, 29),
-                new Color(0, 52, 158)); // body,gun,radar
+                new Color(0, 52, 158)); // body,angleGun,radar
 
         setAdjustRadarForGunTurn(true);
         setAdjustRadarForRobotTurn(true);
         setAdjustGunForRobotTurn(true);
 
         radar = new Radar(this);
-        gun = new Gun(this);
+        angleGun = new AngleGun(this);
+        learningGun = new LearningGun(this);
         enemyShots = loadPreviousShots();
-        firedShots = new ArrayList<>();
         rand = new Random();
 
         while (true) {
@@ -71,12 +71,16 @@ public class BaverMain extends AdvancedRobot {
             dodgeBullet();
 
         updateEnemyPos(e);
-        //avoidWalls(e);
-        //setTurnRight((e.getBearing() - 90));
         keepDistance(e);
-        registerShot(gun.fire(e), e);
+        learningGun.updateShots();
 
-        gun.lockToEnemy(e);
+        if(learningGun.getShotsSize() < 2){
+            Bullet b = angleGun.fire(e);
+            if(b != null)
+                learningGun.registerBullet(e, b);
+            angleGun.lockToEnemy(e);
+        }else
+            learningGun.aimAndFire(e);
 
         enemyShots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.update());
 
@@ -141,7 +145,8 @@ public class BaverMain extends AdvancedRobot {
         g.setColor(new Color(22, 31, 255));
         g.fillRoundRect((int) enemyPos.getX(), (int) enemyPos.getY(), 5, 5, 5, 5);
 
-        gun.paintGun(g);
+        angleGun.paintGun(g);
+        learningGun.paintExpectations(g);
     }
 
     private boolean detectShot(ScannedRobotEvent e) {

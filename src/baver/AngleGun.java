@@ -10,7 +10,7 @@ import java.awt.*;
 /**
  * Created by pontu on 2017-03-01.
  */
-public class Gun {
+public class AngleGun {
     private AdvancedRobot robot;
     private static final double AIM_LIMIT = 0.5f;
     private Vector2D toEnemy;
@@ -18,9 +18,8 @@ public class Gun {
     private Vector2D toHitPoint;
     private double deltaAngle = 180;
     private double firePower = 3;
-    private double additional = 0;
 
-    public Gun(AdvancedRobot robot){
+    public AngleGun(AdvancedRobot robot){
         this.robot = robot;
     }
 
@@ -50,8 +49,8 @@ public class Gun {
     }
 
     public Bullet fire(ScannedRobotEvent e) {
-        if(robot.getGunTurnRemaining() < 0.5 && robot.getGunHeat() == 0){
-            return robot.setFireBullet(firePower);
+        if(robot.getGunTurnRemaining() < AIM_LIMIT && robot.getGunHeat() == 0){
+            return robot.fireBullet(firePower);
         }
 
         return null;
