@@ -34,7 +34,7 @@ public class LearningGun {
     //Returns between 0 and 1 on how sure it is
     //No it doesn't
     public double aimAndFire(ScannedRobotEvent e){
-        if(robot.getGunTurnRemaining() < AIM_LIMIT && robot.getGunHeat() == 0)
+        if(robot.getGunTurnRemaining() < AIM_LIMIT && robot.getGunHeat() == 0 && e.getEnergy() > 0)
             registerBullet(e, robot.setFireBullet(3));
 
         turnToTarget(e);

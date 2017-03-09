@@ -50,7 +50,7 @@ public class AngleGun {
     }
 
     public Bullet fire(ScannedRobotEvent e) {
-        if(robot.getGunTurnRemaining() < AIM_LIMIT && robot.getGunHeat() == 0){
+        if(robot.getGunTurnRemaining() < AIM_LIMIT && robot.getGunHeat() == 0 && e.getEnergy() > 0){
             return robot.setFireBullet(firePower);
         }
 

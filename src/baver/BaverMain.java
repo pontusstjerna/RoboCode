@@ -23,7 +23,7 @@ public class BaverMain extends AdvancedRobot {
 
     private final int LOCK_TIMEOUT = 60;
     private static final int MAX_DISTANCE = 400;
-    private static final int MIN_DISTANCE = 100;
+    private static final int MIN_DISTANCE = 200;
     private static final double WALL_LIMIT = 200;
 
     private int lockTicks = LOCK_TIMEOUT;
@@ -73,7 +73,7 @@ public class BaverMain extends AdvancedRobot {
         updateEnemyPos(e);
         keepDistance(e);
 
-        angleGun.setActive(learningGun.getHitShots() < 2 || learningGun.getMissCount() > 2);
+        angleGun.setActive(learningGun.getHitShots() < 2 || learningGun.getMissCount() > 3);
         learningGun.setActive(!angleGun.isActive());
 
         if(angleGun.isActive()){
@@ -158,8 +158,8 @@ public class BaverMain extends AdvancedRobot {
         g.drawString("Avoidance heading: " + rb.getHeading(), 10, 30);
         g.drawString("Hit rate: " + learningGun.getHitRate()*100 + "%", 10, 45);
 
-        g.setColor(new Color(22, 31, 255));
-        g.fillRoundRect((int) enemyPos.getX(), (int) enemyPos.getY(), 5, 5, 5, 5);
+       // g.setColor(new Color(22, 31, 255));
+        //g.fillRoundRect((int) enemyPos.getX(), (int) enemyPos.getY(), 5, 5, 5, 5);
 
         if(angleGun.isActive())
             angleGun.paintGun(g);
@@ -209,6 +209,7 @@ public class BaverMain extends AdvancedRobot {
             setMaxVelocity(8);
             if (e.getDistance() > MAX_DISTANCE || e.getEnergy() == 0) { //If too far away or disabled
                 setTurnRight(e.getBearing() * dir - 20);
+                if(e.getEnergy() == 0) setAhead(500*dir);
             } else if (e.getDistance() < MIN_DISTANCE) { //If too close to the enemy
                 setTurnRight(e.getBearing() * dir - 160);
             } else { //If in the perfect distance interval
