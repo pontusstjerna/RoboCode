@@ -73,7 +73,7 @@ public class BaverMain extends AdvancedRobot {
         updateEnemyPos(e);
         keepDistance(e);
 
-        angleGun.setActive(learningGun.getHitShots() < 2 || learningGun.getHitRate() < 0.25);
+        angleGun.setActive(learningGun.getHitShots() < 2 || learningGun.getMissCount() > 2);
         learningGun.setActive(!angleGun.isActive());
 
         if(angleGun.isActive()){

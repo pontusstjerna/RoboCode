@@ -22,6 +22,7 @@ public class LearningGun {
     private List<Shot> shots;
     private Shot currentBestMatched;
     private boolean active = false;
+    private int missCount = 0;
 
     public LearningGun(AdvancedRobot robot){
         this.robot = robot;
@@ -101,12 +102,18 @@ public class LearningGun {
 
     public void registerBulletHit(Bullet b){
         //System.out.println("My bullet hit!");
+        missCount = 0;
         shots.stream().filter(x -> x.getState() == Shot.states.IN_AIR && x.getBullet().equals(b)).findFirst().get().setHit();
     }
 
     public void registerBulletMiss(Bullet b){
         //System.out.println("My bullet missed!");
+        missCount++;
         shots.stream().filter(x -> x.getState() == Shot.states.IN_AIR && x.getBullet().equals(b)).findFirst().get().setMiss();
+    }
+
+    public int getMissCount(){
+        return missCount;
     }
 
     private void turnToTarget(ScannedRobotEvent e){
