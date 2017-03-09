@@ -1,5 +1,6 @@
 package baver;
 
+import pontus.Vector2D;
 import robocode.AdvancedRobot;
 import robocode.Bullet;
 import robocode.RobocodeFileOutputStream;
@@ -21,6 +22,7 @@ public class LearningGun {
     private AdvancedRobot robot;
     private List<Shot> shots;
     private Shot currentBestMatched;
+    private double deltaTurretAngle = 0;
     private boolean active = false;
     private int missCount = 0;
 
@@ -72,9 +74,13 @@ public class LearningGun {
     public long getHitShots() { return shots.stream().filter(x -> x.getState() == Shot.states.HIT).count();}
 
     public void paintExpectations(Graphics g){
-        g.setColor(new Color(255,0,255));
         if(currentBestMatched != null)
-            g.fillRoundRect((int)currentBestMatched.getBullet().getX(), (int)currentBestMatched.getBullet().getY(), 10, 10, 10, 10);
+            new Vector2D(
+                    currentBestMatched.getDistance()*
+                            Math.sin(robot.getGunHeadingRadians() + Math.toRadians(deltaTurretAngle)),
+                    currentBestMatched.getDistance()*
+                            Math.cos(robot.getGunHeadingRadians() + Math.toRadians(deltaTurretAngle))
+            ).paintVector((Graphics2D)g, robot.getX(), robot.getY(), new Color(253, 255, 52));
     }
 
     public void saveShots(){
@@ -124,15 +130,15 @@ public class LearningGun {
 
         currentBestMatched = shot;
 
-        double deltaAngle = pretendShot.getTurretBearing() - shot.getTurretBearing();
+        deltaTurretAngle = pretendShot.getTurretBearing() - shot.getTurretBearing();
 
-        if(deltaAngle < 180 && deltaAngle > -180){
-            robot.setTurnGunRight(deltaAngle);
+        if(deltaTurretAngle < 180 && deltaTurretAngle > -180){
+            robot.setTurnGunRight(deltaTurretAngle);
          //   System.out.println("DeltaAngle: " + deltaAngle);
-        }else if(deltaAngle > 180){
-            robot.setTurnGunRight(360 - deltaAngle);
+        }else if(deltaTurretAngle > 180){
+            robot.setTurnGunRight(360 - deltaTurretAngle);
         }else{
-            robot.setTurnGunRight(360 + deltaAngle);
+            robot.setTurnGunRight(360 + deltaTurretAngle);
         }
 
         /*System.out.println("Old turretbearing: " + shot.getTurretBearing());
