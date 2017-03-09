@@ -37,7 +37,7 @@ public class Shot implements Serializable{
         firedTime = e.getTime();
         robotPointOfFire = new Point2D.Double(robot.getX(), robot.getY());
         robotVelocity = robot.getVelocity();
-        turretBearing = Util.get180(Util.get180(e.getBearing()) - Util.get180(robot.getGunHeading()));
+        turretBearing = Util.get180(Util.get180(e.getBearing()) - Util.get180(robot.getGunHeading() - robot.getHeading()));
     }
 
     //Mainly for registering enemy shots
@@ -69,6 +69,8 @@ public class Shot implements Serializable{
     public void setHit(){
         state = states.HIT;
     }
+
+    public void setMiss() {state = states.MISS; }
 
     public double getBearing(){
         return bearing;
@@ -124,8 +126,10 @@ public class Shot implements Serializable{
 
         if(alive > IN_AIR_TIMEOUT){
             if(bullet != null){
-                if(bullet.getVictim().isEmpty())
+                if(bullet.getVictim() == null)
                     state = states.MISS;
+                else
+                    state = states.HIT;
             }else
                 state = states.MISS;
         }

@@ -18,6 +18,7 @@ public class AngleGun {
     private Vector2D toHitPoint;
     private double deltaAngle = 180;
     private double firePower = 3;
+    private boolean active;
 
     public AngleGun(AdvancedRobot robot){
         this.robot = robot;
@@ -50,10 +51,21 @@ public class AngleGun {
 
     public Bullet fire(ScannedRobotEvent e) {
         if(robot.getGunTurnRemaining() < AIM_LIMIT && robot.getGunHeat() == 0){
-            return robot.fireBullet(firePower);
+            return robot.setFireBullet(firePower);
         }
 
         return null;
+    }
+
+    public void setActive(boolean isActive){
+        if(!active && isActive)
+            System.out.println("Angle gun activated.");
+
+        active = isActive;
+    }
+
+    public boolean isActive(){
+        return active;
     }
 
     public void paintGun(Graphics2D g){

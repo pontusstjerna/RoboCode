@@ -72,9 +72,11 @@ public class BaverMain extends AdvancedRobot {
 
         updateEnemyPos(e);
         keepDistance(e);
-        learningGun.updateShots();
 
-        if(learningGun.getShotsSize() < 2){
+        angleGun.setActive(learningGun.getHitShots() < 2 || learningGun.getHitRate() < 0.25);
+        learningGun.setActive(!angleGun.isActive());
+
+        if(angleGun.isActive()){
             Bullet b = angleGun.fire(e);
             if(b != null)
                 learningGun.registerBullet(e, b);
@@ -83,8 +85,17 @@ public class BaverMain extends AdvancedRobot {
             learningGun.aimAndFire(e);
 
         enemyShots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.update());
-
         scan();
+    }
+
+    @Override
+    public void onBulletHit(BulletHitEvent e){
+        learningGun.registerBulletHit(e.getBullet());
+    }
+
+    @Override
+    public void onBulletMissed(BulletMissedEvent e){
+        learningGun.registerBulletMiss(e.getBullet());
     }
 
     @Override
@@ -104,8 +115,8 @@ public class BaverMain extends AdvancedRobot {
 
     @Override
     public void onDeath(DeathEvent e) {
-        System.out.println("Shots hit: " + enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT).count());
-        System.out.println("Shots missed: " + enemyShots.stream().filter(s -> s.getState() == Shot.states.MISS).count());
+        System.out.println("Enemy shots hit: " + enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT).count());
+        System.out.println("Enemy shots missed: " + enemyShots.stream().filter(s -> s.getState() == Shot.states.MISS).count());
 
         //Remove missed
         List toRemove = new ArrayList<>();
@@ -124,6 +135,8 @@ public class BaverMain extends AdvancedRobot {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+
+        learningGun.saveShots();
     }
 
     @Override
@@ -138,22 +151,27 @@ public class BaverMain extends AdvancedRobot {
 
         Vector2D rb = new Vector2D(b.getX() - getX(), b.getY() - getY());
         double bearing = Util.get180(Util.get180(getHeading()) - Util.get180(rb.getHeading()));
+
+        g.setColor(Color.white);
         g.drawString("Bearing to avoidance: " + bearing, 10, 10);
         g.drawString("Robot heading: " + getHeading(), 10, 20);
         g.drawString("Avoidance heading: " + rb.getHeading(), 10, 30);
+        g.drawString("Hit rate: " + learningGun.getHitRate()*100 + "%", 10, 45);
 
         g.setColor(new Color(22, 31, 255));
         g.fillRoundRect((int) enemyPos.getX(), (int) enemyPos.getY(), 5, 5, 5, 5);
 
-        angleGun.paintGun(g);
-        learningGun.paintExpectations(g);
+        if(angleGun.isActive())
+            angleGun.paintGun(g);
+        else
+            learningGun.paintExpectations(g);
     }
 
     private boolean detectShot(ScannedRobotEvent e) {
         boolean fired = e.getEnergy() < oldEnemyEnergy;
 
         if (fired) {
-            System.out.println("Shot registered. Shots: " + enemyShots.size());
+           // System.out.println("Shot registered. Shots: " + enemyShots.size());
             Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), this);
             enemyShots.add(shot);
         }
