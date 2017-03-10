@@ -21,12 +21,7 @@ public class BaverMain extends AdvancedRobot {
     private AngleGun angleGun;
     private LearningGun learningGun;
 
-    private final int LOCK_TIMEOUT = 60;
-    private static final int MAX_DISTANCE = 400;
-    private static final int MIN_DISTANCE = 200;
-    private static final double WALL_LIMIT = 100;
-
-    private int lockTicks = LOCK_TIMEOUT;
+    private int lockTicks = Reference.LOCK_TIMEOUT;
     private int dir = 1;
     private double oldEnemyEnergy;
 
@@ -52,7 +47,7 @@ public class BaverMain extends AdvancedRobot {
         rand = new Random();
 
         while (true) {
-            if (lockTicks >= LOCK_TIMEOUT) {
+            if (lockTicks >= Reference.LOCK_TIMEOUT) {
                 setTurnRadarRight(360);
             } else {
                 lockTicks++;
@@ -67,7 +62,7 @@ public class BaverMain extends AdvancedRobot {
     @Override
     public void onScannedRobot(ScannedRobotEvent e) {
         radar.lockOnTarget(e);
-        if (detectShot(e) && getDistanceToWall() > WALL_LIMIT)
+        if (detectShot(e) && getDistanceToWall() > Reference.WALL_LIMIT)
             dodgeBullet();
 
         updateEnemyPos(e);
@@ -141,13 +136,13 @@ public class BaverMain extends AdvancedRobot {
 
     @Override
     public void onPaint(Graphics2D g) {
-        g.setColor(new Color(255, 0, 0));
-
         if (enemyShots.size() == 0)
             return;
 
         Point2D.Double b = getExpectedImpact(enemyShots.get(enemyShots.size() - 1));
-        g.fillRoundRect((int) b.getX(), (int) b.getY(), 10, 10, 10, 10);
+        Vector2D eb = new Vector2D(b.getX() - enemyPos.getX(), b.getY() - enemyPos.getY());
+        //g.fillRoundRect((int) b.getX(), (int) b.getY(), 10, 10, 10, 10);
+        eb.paintVector(g, enemyPos.getX(), enemyPos.getY(), Color.red);
 
         Vector2D rb = new Vector2D(b.getX() - getX(), b.getY() - getY());
         double bearing = Util.get180(Util.get180(getHeading()) - Util.get180(rb.getHeading()));
@@ -168,7 +163,8 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private boolean detectShot(ScannedRobotEvent e) {
-        boolean fired = e.getEnergy() < oldEnemyEnergy;
+        double deltaEnergy = e.getEnergy() - oldEnemyEnergy;
+        boolean fired = deltaEnergy < 0;
 
         if (fired) {
            // System.out.println("Shot registered. Shots: " + enemyShots.size());
@@ -205,18 +201,18 @@ public class BaverMain extends AdvancedRobot {
         double distWall = getDistanceToWall();
         double angToMid = getAngleToMiddle();
         double percentToWall = getDistanceToMiddle()/distWall;
-        double additionalTurnToMiddle = angToMid*percentToWall;
+        double additionalTurnToMiddle = angToMid*percentToWall*0;
         boolean inFront = isInFront(enemyPos.getX(), enemyPos.getY());
 
-        if (distWall > WALL_LIMIT || e.getEnergy() == 0) { //If not close to any wall
+        if (distWall > Reference.WALL_LIMIT || e.getEnergy() == 0) { //If not close to any wall
             setMaxVelocity(8);
-            if (e.getDistance() > MAX_DISTANCE || e.getEnergy() == 0) { //If too far away or disabled
-                setTurnRight(e.getBearing() * dir - 20 + additionalTurnToMiddle);
-                if(e.getEnergy() == 0) setAhead(500*dir);
-            } else if (e.getDistance() < MIN_DISTANCE) { //If too close to the enemy
-                //setTurnRight(e.getBearing() * dir - 160 + additionalTurnToMiddle*dir);
-                if(inFront) dir = -1;
-                else dir = 1;
+            if (e.getEnergy() == 0) { //If component disabled
+                setTurnRight(e.getBearing() * dir);
+                setAhead(500*dir);
+            } else if (e.getDistance() < Reference.MIN_DISTANCE) { //If too close to the enemy
+                setTurnRight(e.getBearing() * dir - 160 + additionalTurnToMiddle*dir);
+                //if(inFront) dir = -1;
+                //else dir = 1;
             } else { //If in the perfect distance interval
                 setTurnRight((e.getBearing() - 90 + additionalTurnToMiddle*dir));
             }
@@ -227,7 +223,7 @@ public class BaverMain extends AdvancedRobot {
             }else
                 dir = 1;
             setTurnRight(angToMid);
-            setAhead(WALL_LIMIT*dir);
+            setAhead(Reference.WALL_LIMIT*dir);
         }
         setAhead((rand.nextInt(200) + 70) * dir);
     }

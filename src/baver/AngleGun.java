@@ -12,7 +12,6 @@ import java.awt.*;
  */
 public class AngleGun {
     private AdvancedRobot robot;
-    private static final double AIM_LIMIT = 0.5f;
     private Vector2D toEnemy;
     private Vector2D enemyPath;
     private Vector2D toHitPoint;
@@ -50,8 +49,8 @@ public class AngleGun {
     }
 
     public Bullet fire(ScannedRobotEvent e) {
-        if(robot.getGunTurnRemaining() < AIM_LIMIT && robot.getGunHeat() == 0 && e.getEnergy() > 0){
-            return robot.setFireBullet(firePower);
+        if(robot.getGunTurnRemaining() < Reference.AIM_LIMIT && robot.getGunHeat() == 0 && e.getEnergy() > 0){
+            return robot.setFireBullet(Reference.FIREPOWER);
         }
 
         return null;
@@ -70,9 +69,9 @@ public class AngleGun {
 
     public void paintGun(Graphics2D g){
         if(enemyPath != null && toEnemy != null){
-            enemyPath.paintVector(g, robot.getX() + toEnemy.getX(), robot.getY() + toEnemy.getY(), Color.RED);
-            toEnemy.paintVector(g, robot.getX(), robot.getY(), Color.RED);
-            toHitPoint.paintVector(g, robot.getX(), robot.getY(), Color.CYAN);
+            enemyPath.paintVector(g, robot.getX() + toEnemy.getX(), robot.getY() + toEnemy.getY(), Color.GREEN);
+            //toEnemy.paintVector(g, robot.getX(), robot.getY(), Color.LIGHT_GRAY);
+            toHitPoint.paintVector(g, robot.getX(), robot.getY(), Color.LIGHT_GRAY);
         }
     }
 }

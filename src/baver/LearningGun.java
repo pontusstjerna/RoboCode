@@ -10,14 +10,13 @@ import java.awt.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  * Created by pontu on 2017-03-08.
  */
 public class LearningGun {
-    //Balancing
-    private final double AIM_LIMIT = 1;
 
     private AdvancedRobot robot;
     private List<Shot> shots;
@@ -34,8 +33,8 @@ public class LearningGun {
     //Returns between 0 and 1 on how sure it is
     //No it doesn't
     public double aimAndFire(ScannedRobotEvent e){
-        if(robot.getGunTurnRemaining() < AIM_LIMIT && robot.getGunHeat() == 0 && e.getEnergy() > 0)
-            registerBullet(e, robot.setFireBullet(3));
+        if(robot.getGunTurnRemaining() < Reference.AIM_LIMIT && robot.getGunHeat() == 0 && e.getEnergy() > 0)
+            registerBullet(e, robot.setFireBullet(Reference.FIREPOWER));
 
         turnToTarget(e);
         return 1;
@@ -109,7 +108,9 @@ public class LearningGun {
     public void registerBulletHit(Bullet b){
         //System.out.println("My bullet hit!");
         missCount = 0;
-        shots.stream().filter(x -> x.getState() == Shot.states.IN_AIR && x.getBullet().equals(b)).findFirst().get().setHit();
+        Optional<Shot> maybeShot = shots.stream().filter(x -> x.getState() == Shot.states.IN_AIR && x.getBullet().equals(b)).findFirst();
+        if(maybeShot.isPresent())
+            maybeShot.get().setHit();
     }
 
     public void registerBulletMiss(Bullet b){
