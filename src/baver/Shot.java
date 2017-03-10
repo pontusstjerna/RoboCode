@@ -27,6 +27,7 @@ public class Shot implements Serializable{
     private Point2D.Double robotPointOfFire;
     private double robotVelocity;
     private double turretBearing = -1;
+    private double deltaHeading;
 
     //Primary constructor
     public Shot(ScannedRobotEvent e, AdvancedRobot robot){
@@ -38,6 +39,7 @@ public class Shot implements Serializable{
         robotPointOfFire = new Point2D.Double(robot.getX(), robot.getY());
         robotVelocity = robot.getVelocity();
         turretBearing = Util.get180(Util.get180(e.getBearing()) - Util.get180(robot.getGunHeading() - robot.getHeading()));
+        deltaHeading = Util.get180(robot.getHeading() - e.getHeading());
     }
 
     //Mainly for registering enemy shots
@@ -80,6 +82,8 @@ public class Shot implements Serializable{
         return velocity;
     }
 
+    public double getDeltaHeading() {return deltaHeading;}
+
     public double getDistance(){
         return distance;
     }
@@ -103,6 +107,7 @@ public class Shot implements Serializable{
         double dVelocity = getVelocity() - shot.getVelocity();
         double dDistance = 0;
         double dTurretBearing = 0;
+        double dDeltaHeading = getDeltaHeading() - shot.getDeltaHeading();
 
         if(distance != -1 && shot.getDistance() != -1)
             dDistance = distance - shot.getDistance();
@@ -111,7 +116,7 @@ public class Shot implements Serializable{
         double dRobVel = robotVelocity - shot.robotVelocity;
 
         return Math.sqrt(dBearing*dBearing + dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel +
-        dTurretBearing*dTurretBearing);
+        dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading);
     }
 
     states getState(){

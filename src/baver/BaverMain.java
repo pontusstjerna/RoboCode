@@ -24,7 +24,7 @@ public class BaverMain extends AdvancedRobot {
     private final int LOCK_TIMEOUT = 60;
     private static final int MAX_DISTANCE = 400;
     private static final int MIN_DISTANCE = 200;
-    private static final double WALL_LIMIT = 200;
+    private static final double WALL_LIMIT = 100;
 
     private int lockTicks = LOCK_TIMEOUT;
     private int dir = 1;
@@ -187,15 +187,12 @@ public class BaverMain extends AdvancedRobot {
 
         Point2D.Double b = getExpectedImpact(enemyShots.get(enemyShots.size() - 1));
 
-        Vector2D rb = new Vector2D(b.getX() - getX(), b.getY() - getY());
-        double bearing = Util.get180(Util.get180(getHeading()) - Util.get180(rb.getHeading()));
-
-        if (bearing < 90 && bearing >= -90)
+        if (isInFront(b.getX(), b.getY()))
             dir = -1;
         else
             dir = 1;
 
-        setAhead(dir*getHeight()*2);
+        //setAhead(dir*getHeight()*2);
     }
 
     private void registerShot(Bullet b, ScannedRobotEvent e){
@@ -205,33 +202,39 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private void keepDistance(ScannedRobotEvent e) {
-        if (getDistanceToWall() > WALL_LIMIT || e.getEnergy() == 0) { //If not close to any wall
+        double distWall = getDistanceToWall();
+        double angToMid = getAngleToMiddle();
+        double percentToWall = getDistanceToMiddle()/distWall;
+        double additionalTurnToMiddle = angToMid*percentToWall;
+        boolean inFront = isInFront(enemyPos.getX(), enemyPos.getY());
+
+        if (distWall > WALL_LIMIT || e.getEnergy() == 0) { //If not close to any wall
             setMaxVelocity(8);
             if (e.getDistance() > MAX_DISTANCE || e.getEnergy() == 0) { //If too far away or disabled
-                setTurnRight(e.getBearing() * dir - 20);
+                setTurnRight(e.getBearing() * dir - 20 + additionalTurnToMiddle);
                 if(e.getEnergy() == 0) setAhead(500*dir);
             } else if (e.getDistance() < MIN_DISTANCE) { //If too close to the enemy
-                setTurnRight(e.getBearing() * dir - 160);
+                //setTurnRight(e.getBearing() * dir - 160 + additionalTurnToMiddle*dir);
+                if(inFront) dir = -1;
+                else dir = 1;
             } else { //If in the perfect distance interval
-                setTurnRight((e.getBearing() - 90));
+                setTurnRight((e.getBearing() - 90 + additionalTurnToMiddle*dir));
             }
         } else { //Turn to middle!
-            if (getAngleToMiddle() > 90 && getAngleToMiddle() < -90) { //If too close, break
+            if (angToMid > 90 && angToMid < -90) { //If too close, break
                 //setMaxVelocity(8 - 7 * (1 / getDistanceToWall()));
                 dir = -1;
             }else
                 dir = 1;
-            setTurnRight(getAngleToMiddle());
-            setAhead(WALL_LIMIT);
+            setTurnRight(angToMid);
+            setAhead(WALL_LIMIT*dir);
         }
-       // setAhead((rand.nextInt(200) + 70) * dir);
+        setAhead((rand.nextInt(200) + 70) * dir);
     }
 
     private void updateEnemyPos(ScannedRobotEvent e) {
         enemyPos.x = getX() + e.getDistance() * Math.sin(getRadarHeadingRadians());
         enemyPos.y = getY() + e.getDistance() * Math.cos(getRadarHeadingRadians());
-        //enemyPos.x = getX() - e.getDistance()*Math.sin(getHeadingRadians() - e.getBearingRadians());
-        //enemyPos.y = getY() - e.getDistance()*Math.cos(getHeadingRadians() - e.getBearingRadians());
     }
 
     private Shot getBestMatchedShot(Shot shot) {
@@ -274,6 +277,13 @@ public class BaverMain extends AdvancedRobot {
         return angle;
     }
 
+    private boolean isInFront(double x, double y){
+        Vector2D rb = new Vector2D(x - getX(), y - getY());
+        double bearing = Util.get180(Util.get180(getHeading()) - Util.get180(rb.getHeading()));
+
+        return bearing < 90 && bearing >= -90;
+    }
+
     private double getDistanceToWall() {
         double[] distances = {getX(), getY(), getBattleFieldWidth() - getX(), getBattleFieldHeight() - getY()};
         double distance = distances[0];
@@ -285,6 +295,10 @@ public class BaverMain extends AdvancedRobot {
         }
 
         return distance;
+    }
+
+    private double getDistanceToMiddle(){
+        return Point.distance(getBattleFieldWidth()/2, getBattleFieldHeight()/2, getX(), getY());
     }
 
     private double getAngleToMiddle() {
