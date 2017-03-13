@@ -64,7 +64,8 @@ public class BaverMain extends AdvancedRobot {
     public void onScannedRobot(ScannedRobotEvent e) {
         radar.lockOnTarget(e);
         if (detectShot(e) && getDistanceToWall() > Reference.WALL_LIMIT)
-            dodgeBullet();
+           // dodgeBullet();
+            dir = -dir;
 
         updateEnemyPos(e);
         keepDistance(e);
@@ -110,6 +111,12 @@ public class BaverMain extends AdvancedRobot {
     }
 
     @Override
+    public void onHitRobot(HitRobotEvent e){
+        setAhead(200*dir);
+        setFire(3);
+    }
+
+    @Override
     public void onDeath(DeathEvent e) {
         System.out.println("Enemy shots hit: " + enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT).count());
         System.out.println("Enemy shots missed: " + enemyShots.stream().filter(s -> s.getState() == Shot.states.MISS).count());
@@ -140,8 +147,9 @@ public class BaverMain extends AdvancedRobot {
         if (enemyShots.size() == 0)
             return;
 
-        for(int i = enemyShots.size() - 1; i > 0; i--){
-            Vector2D eb = getExpectedImpact(enemyShots.get(i));
+        List<Shot> bestMatched = getBestMatchedShots(enemyShots.get(enemyShots.size()-1), 10);
+        for(Shot s : bestMatched){
+            Vector2D eb = getExpectedImpact(s);
             //Vector2D eb = new Vector2D(b.getX() - enemyPos.getX(), b.getY() - enemyPos.getY());
             eb.paintVector(g, enemyPos.getX(), enemyPos.getY(), Color.red);
         }
@@ -152,9 +160,8 @@ public class BaverMain extends AdvancedRobot {
         g.setColor(Color.white);
         g.drawString("Bearing to avoidance: " + bearing, 10, 10);
         g.drawString("Robot heading: " + getHeading(), 10, 20);
-        g.drawString("Avoidance heading: " + rb.getHeading(), 10, 30);
+        g.drawString("Avoidance heading: " + rb.getHeading(), 10, 30);*/
         g.drawString("Hit rate: " + learningGun.getHitRate()*100 + "%", 10, 45);
-*/
        // g.setColor(new Color(22, 31, 255));
         //g.fillRoundRect((int) enemyPos.getX(), (int) enemyPos.getY(), 5, 5, 5, 5);
 
@@ -256,15 +263,8 @@ public class BaverMain extends AdvancedRobot {
     private List<Shot> getBestMatchedShots(Shot shot, int maxSize){
         Stream<Shot> bestMatched = enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT);
 
-        if (bestMatched.count() == 0)
-            return null;
-
-        //bestMatched = bestMatched.sorted()
-
-        for(int i = 0; i < maxSize; i++){
-            double latestDistance = Double.MAX_VALUE;
-
-        }
+        bestMatched = bestMatched.sorted((x,y) -> x.getDistance(shot) < y.getDistance(shot) ? -1 : 1);
+        return bestMatched.limit(maxSize).collect(Collectors.toList());
     }
 
     private Vector2D getExpectedImpact(Shot justFired) {
@@ -276,12 +276,12 @@ public class BaverMain extends AdvancedRobot {
         return new Vector2D(
                 justFired.getRobotPointOfFire().getX() +
                         similarShot.getBullet().getX() -
-                        similarShot.getRobotPointOfFire().getX() -
-                        enemyPos.getX(),
+                        similarShot.getRobotPointOfFire().getX(),
+                        //enemyPos.getX(),
                 justFired.getRobotPointOfFire().getY() +
                         similarShot.getBullet().getY() -
-                        similarShot.getRobotPointOfFire().getY() -
-                        enemyPos.getY()
+                        similarShot.getRobotPointOfFire().getY()
+                        //enemyPos.getY()
         );
     }
 

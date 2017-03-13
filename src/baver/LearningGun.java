@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Created by pontu on 2017-03-08.
@@ -34,7 +35,7 @@ public class LearningGun {
     //No it doesn't
     public double aimAndFire(ScannedRobotEvent e){
         if(robot.getGunTurnRemaining() < Reference.AIM_LIMIT && robot.getGunHeat() == 0 && e.getEnergy() > 0)
-            registerBullet(e, robot.setFireBullet(1 + getHitRate()*2));
+            registerBullet(e, robot.setFireBullet(Reference.FIREPOWER));
 
         turnToTarget(e);
         return 1;
@@ -116,7 +117,9 @@ public class LearningGun {
     public void registerBulletMiss(Bullet b){
         //System.out.println("My bullet missed!");
         missCount++;
-        shots.stream().filter(x -> x.getState() == Shot.states.IN_AIR && x.getBullet().equals(b)).findFirst().get().setMiss();
+        Optional<Shot> inAir = shots.stream().filter(x -> x.getState() == Shot.states.IN_AIR && x.getBullet().equals(b)).findFirst();
+        if(inAir.isPresent())
+            inAir.get().setMiss();
     }
 
     public int getMissCount(){
@@ -125,7 +128,7 @@ public class LearningGun {
 
     private void turnToTarget(ScannedRobotEvent e){
         Shot pretendShot = new Shot(e, robot);
-        Shot shot = getBestMatched(e, pretendShot);
+        Shot shot = getBestMatched(pretendShot);
         if(shot == null)
             return;
 
@@ -148,26 +151,13 @@ public class LearningGun {
         System.out.println("--");*/
     }
 
-    private Shot getBestMatched(ScannedRobotEvent e, Shot shot){
-        if(shots.size() == 0)
-            return null;
+    private Shot getBestMatched(Shot shot){
+        Optional<Shot> bestMatch = shots.stream().filter(s -> s.getState() == Shot.states.HIT).
+                sorted((x,y) -> x.getDistance(shot) < y.getDistance(shot) ? -1 : 1).findFirst();
+        if(bestMatch.isPresent())
+            return bestMatch.get();
 
-        Shot closest;
-
-        List<Shot> hitShots = shots.stream().filter(s -> s.getState() == Shot.states.HIT).collect(Collectors.toList());
-
-        if (hitShots.size() > 0)
-            closest = hitShots.get(0);
-        else
-            return null;
-
-
-        for (Shot s : hitShots) {
-            if (shot.getDistance(s) < closest.getDistance(s))
-                closest = s;
-        }
-
-        return closest;
+        return null;
     }
 
         private List<Shot> loadPreviousShots() {
