@@ -18,7 +18,8 @@ public class Shot implements Serializable{
     private final int IN_AIR_TIMEOUT = 60; //2 sec @ 30 tps
     private states state;
 
-    private double bearing, velocity;
+    private double radarBearing;
+    private double velocity;
     private double distance = -1;
     private Bullet bullet = null;
     private int alive = 0;
@@ -32,7 +33,7 @@ public class Shot implements Serializable{
     //Primary constructor
     public Shot(ScannedRobotEvent e, AdvancedRobot robot){
         state = states.IN_AIR;
-        bearing = e.getBearing();
+        radarBearing = Util.get180(e.getBearing() - Util.get180(robot.getRadarHeading()));
         velocity = e.getVelocity();
         distance = e.getDistance();
         firedTime = e.getTime();
@@ -51,7 +52,7 @@ public class Shot implements Serializable{
     //Getting hit by enemy shots
     public Shot(HitByBulletEvent e){
         state = states.HIT;
-        bearing = e.getBearing();
+        radarBearing = e.getBearing();
         velocity = e.getVelocity();
         distance = -1;
         bullet = e.getBullet();
@@ -74,8 +75,8 @@ public class Shot implements Serializable{
 
     public void setMiss() {state = states.MISS; }
 
-    public double getBearing(){
-        return bearing;
+    public double getRadarBearing(){
+        return radarBearing;
     }
 
     public double getVelocity(){
@@ -103,7 +104,7 @@ public class Shot implements Serializable{
     }
 
     public double getDistance(Shot shot){
-        double dBearing = getBearing() - shot.getBearing();
+        double dBearing = getRadarBearing() - shot.getRadarBearing();
         double dVelocity = getVelocity() - shot.getVelocity();
         double dDistance = 0;
         double dTurretBearing = 0;

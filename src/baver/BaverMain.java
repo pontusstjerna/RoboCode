@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -139,12 +140,13 @@ public class BaverMain extends AdvancedRobot {
         if (enemyShots.size() == 0)
             return;
 
-        Point2D.Double b = getExpectedImpact(enemyShots.get(enemyShots.size() - 1));
-        Vector2D eb = new Vector2D(b.getX() - enemyPos.getX(), b.getY() - enemyPos.getY());
-        //g.fillRoundRect((int) b.getX(), (int) b.getY(), 10, 10, 10, 10);
-        eb.paintVector(g, enemyPos.getX(), enemyPos.getY(), Color.red);
+        for(int i = enemyShots.size() - 1; i > 0; i--){
+            Vector2D eb = getExpectedImpact(enemyShots.get(i));
+            //Vector2D eb = new Vector2D(b.getX() - enemyPos.getX(), b.getY() - enemyPos.getY());
+            eb.paintVector(g, enemyPos.getX(), enemyPos.getY(), Color.red);
+        }
 
-        Vector2D rb = new Vector2D(b.getX() - getX(), b.getY() - getY());
+        /*Vector2D rb = new Vector2D(eb.getX() - getX(), eb.getY() - getY());
         double bearing = Util.get180(Util.get180(getHeading()) - Util.get180(rb.getHeading()));
 
         g.setColor(Color.white);
@@ -152,7 +154,7 @@ public class BaverMain extends AdvancedRobot {
         g.drawString("Robot heading: " + getHeading(), 10, 20);
         g.drawString("Avoidance heading: " + rb.getHeading(), 10, 30);
         g.drawString("Hit rate: " + learningGun.getHitRate()*100 + "%", 10, 45);
-
+*/
        // g.setColor(new Color(22, 31, 255));
         //g.fillRoundRect((int) enemyPos.getX(), (int) enemyPos.getY(), 5, 5, 5, 5);
 
@@ -181,7 +183,7 @@ public class BaverMain extends AdvancedRobot {
         if (enemyShots.size() == 0)
             return;
 
-        Point2D.Double b = getExpectedImpact(enemyShots.get(enemyShots.size() - 1));
+        Vector2D b = getExpectedImpact(enemyShots.get(enemyShots.size() - 1));
 
         if (isInFront(b.getX(), b.getY()))
             dir = -1;
@@ -251,15 +253,35 @@ public class BaverMain extends AdvancedRobot {
         return closest;
     }
 
-    private Point2D.Double getExpectedImpact(Shot justFired) {
+    private List<Shot> getBestMatchedShots(Shot shot, int maxSize){
+        Stream<Shot> bestMatched = enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT);
+
+        if (bestMatched.count() == 0)
+            return null;
+
+        //bestMatched = bestMatched.sorted()
+
+        for(int i = 0; i < maxSize; i++){
+            double latestDistance = Double.MAX_VALUE;
+
+        }
+    }
+
+    private Vector2D getExpectedImpact(Shot justFired) {
         Shot similarShot = getBestMatchedShot(justFired);
 
         if (similarShot == null)
-            return justFired.getRobotPointOfFire(); //Basically move the fk out
+            return new Vector2D(getX(), getY()); //Basically move the fk out
 
-        return new Point2D.Double(
-                justFired.getRobotPointOfFire().getX() + similarShot.getBullet().getX() - similarShot.getRobotPointOfFire().getX(),
-                justFired.getRobotPointOfFire().getY() + similarShot.getBullet().getY() - similarShot.getRobotPointOfFire().getY()
+        return new Vector2D(
+                justFired.getRobotPointOfFire().getX() +
+                        similarShot.getBullet().getX() -
+                        similarShot.getRobotPointOfFire().getX() -
+                        enemyPos.getX(),
+                justFired.getRobotPointOfFire().getY() +
+                        similarShot.getBullet().getY() -
+                        similarShot.getRobotPointOfFire().getY() -
+                        enemyPos.getY()
         );
     }
 
