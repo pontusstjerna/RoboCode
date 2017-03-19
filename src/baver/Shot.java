@@ -1,5 +1,6 @@
 package baver;
 
+import pontus.Vector2D;
 import robocode.AdvancedRobot;
 import robocode.Bullet;
 import robocode.HitByBulletEvent;
@@ -18,26 +19,27 @@ public class Shot implements Serializable{
     private final int IN_AIR_TIMEOUT = 60; //2 sec @ 30 tps
     private states state;
 
-    private double radarBearing;
     private double velocity;
     private double distance = -1;
     private Bullet bullet = null;
     private int alive = 0;
     private long firedTime = 0;
-    private Point2D.Double enemyPointOfFire;
-    private Point2D.Double robotPointOfFire;
+    private Point2D.Double robotPointAtFire;
+    private Point2D.Double enemyPointAtFire;
     private double robotVelocity;
     private double turretBearing = -1;
     private double deltaHeading;
+    private double enemyDeltaAngle = -1;
+    private double distanceToImpact = -1;
 
     //Primary constructor
     public Shot(ScannedRobotEvent e, AdvancedRobot robot){
         state = states.IN_AIR;
-        radarBearing = Util.get180(e.getBearing() - Util.get180(robot.getRadarHeading()));
+        //radarBearing = Util.get180(e.getBearing() - Util.get180(robot.getRadarHeading()));
         velocity = e.getVelocity();
         distance = e.getDistance();
         firedTime = e.getTime();
-        robotPointOfFire = new Point2D.Double(robot.getX(), robot.getY());
+        robotPointAtFire = new Point2D.Double(robot.getX(), robot.getY());
         robotVelocity = robot.getVelocity();
         turretBearing = Util.get180(Util.get180(e.getBearing()) - Util.get180(robot.getGunHeading() - robot.getHeading()));
         deltaHeading = Util.get180(robot.getHeading() - e.getHeading());
@@ -46,13 +48,13 @@ public class Shot implements Serializable{
     //Mainly for registering enemy shots
     public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, AdvancedRobot robot){
         this(e, robot);
-        enemyPointOfFire = enemyPos;
+        enemyPointAtFire = enemyPos;
     }
 
     //Getting hit by enemy shots
     public Shot(HitByBulletEvent e){
         state = states.HIT;
-        radarBearing = e.getBearing();
+        //radarBearing = e.getBearing();
         velocity = e.getVelocity();
         distance = -1;
         bullet = e.getBullet();
@@ -69,15 +71,27 @@ public class Shot implements Serializable{
         bullet = b;
     }
 
+    public void setRobotHit(Bullet b, Point2D.Double enemyPointAtHit){
+        setHit(b);
+        double ER_bearing = Vector2D.getHeading(
+                robotPointAtFire.getX() - enemyPointAtFire.getX(),
+                robotPointAtFire.getY() - enemyPointAtFire.getY());
+
+        Vector2D eb = new Vector2D(b.getX() - enemyPointAtFire.getX(),
+                b.getY() - enemyPointAtFire.getY());
+
+        double EB_bearing = eb.getHeading();
+
+        enemyDeltaAngle = Util.get180(ER_bearing - EB_bearing);
+        System.out.println("Edv: " + enemyDeltaAngle);
+        distanceToImpact = Vector2D.getLength(eb);
+    }
+
     public void setHit(){
         state = states.HIT;
     }
 
     public void setMiss() {state = states.MISS; }
-
-    public double getRadarBearing(){
-        return radarBearing;
-    }
 
     public double getVelocity(){
         return velocity;
@@ -95,16 +109,24 @@ public class Shot implements Serializable{
         return turretBearing;
     }
 
-    public Point2D.Double getEnemyPointOfFire(){
-        return enemyPointOfFire;
+    public Point2D.Double getEnemyPointAtFire(){
+        return enemyPointAtFire;
     }
 
-    public Point2D.Double getRobotPointOfFire(){
-        return robotPointOfFire;
+    public Point2D.Double getRobotPointAtFire(){
+        return robotPointAtFire;
+    }
+
+    public double getDistanceToImpact(){
+        return distanceToImpact;
+    }
+
+    public double getEnemyDeltaAngle(){
+        return enemyDeltaAngle;
     }
 
     public double getDistance(Shot shot){
-        double dBearing = getRadarBearing() - shot.getRadarBearing();
+   //     double dBearing = getRadarBearing() - shot.getRadarBearing();
         double dVelocity = getVelocity() - shot.getVelocity();
         double dDistance = 0;
         double dTurretBearing = 0;
@@ -116,7 +138,7 @@ public class Shot implements Serializable{
             dTurretBearing = turretBearing - shot.getTurretBearing();
         double dRobVel = robotVelocity - shot.robotVelocity;
 
-        return Math.sqrt(dBearing*dBearing + dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel +
+        return Math.sqrt(dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel +
         dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading);
     }
 

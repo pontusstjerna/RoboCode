@@ -86,6 +86,14 @@ public class Vector2D
         return Math.atan2(x,y);
     }
 
+    public static double getHeadingRadians(double x, double y){
+        return Math.atan2(x,y);
+    }
+
+    public static double getHeading(double x, double y){
+        return Math.toDegrees(getHeadingRadians(x,y));
+    }
+
     public static Vector2D getHeadingVector(double headingRadians, double length, double velocity){
         return new Vector2D(Math.signum(velocity) * -length * Math.cos(-(headingRadians + (Math.PI / 2))),
                 Math.signum(velocity) * -length * Math.sin(-(headingRadians + (Math.PI / 2))));
