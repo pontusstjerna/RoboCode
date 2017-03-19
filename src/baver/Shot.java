@@ -31,6 +31,7 @@ public class Shot implements Serializable{
     private double deltaHeading;
     private double enemyDeltaAngle = -1;
     private double distanceToImpact = -1;
+    private double power = 0; //TODO
 
     //Primary constructor
     public Shot(ScannedRobotEvent e, AdvancedRobot robot){

@@ -20,6 +20,6 @@ public class Radar {
     }
 
     double getRadarBearing(ScannedRobotEvent e) {
-        return e.getBearing() - (main.get180(main.getRadarHeading() - main.get180(main.getHeading())));
+        return e.getBearing() - (Util.get180(main.getRadarHeading() - Util.get180(main.getHeading())));
     }
 }

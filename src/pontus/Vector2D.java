@@ -52,6 +52,10 @@ public class Vector2D
         return Math.sqrt(Math.pow(vector.getX(),2) + Math.pow(vector.getY(),2));
     }
 
+    public double getLength(){
+        return getLength(this);
+    }
+
     public double minAngle(Vector2D vector){
         //Linear Algebra!! A dot B = ||A|| * ||B|| * cosv
         //cosv = A dot B / ||A|| * ||B||
@@ -101,6 +105,10 @@ public class Vector2D
 
     public static Vector2D add(Vector2D a, Vector2D b){
         return new Vector2D(a.getX() + b.getX(), a.getY() + b.getY());
+    }
+
+    public static Vector2D sub(Vector2D a, Vector2D b){
+        return new Vector2D(a.getX() - b.getX(), a.getY() - b.getY());
     }
 
     @Override
