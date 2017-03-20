@@ -31,7 +31,7 @@ public class Shot implements Serializable{
     private double deltaHeading;
     private double enemyDeltaAngle = -1;
     private double distanceToImpact = -1;
-    private double power = 0; //TODO
+    private double power = 0;
 
     //Primary constructor
     public Shot(ScannedRobotEvent e, AdvancedRobot robot){
@@ -47,9 +47,10 @@ public class Shot implements Serializable{
     }
 
     //Mainly for registering enemy shots
-    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, AdvancedRobot robot){
+    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, double power, AdvancedRobot robot){
         this(e, robot);
         enemyPointAtFire = enemyPos;
+        this.power = Math.abs(power);
     }
 
     //Getting hit by enemy shots
@@ -108,6 +109,10 @@ public class Shot implements Serializable{
 
     public double getTurretBearing(){
         return turretBearing;
+    }
+
+    public double getPower(){
+        return power == 0 && bullet != null ? bullet.getPower() : power;
     }
 
     public Point2D.Double getEnemyPointAtFire(){

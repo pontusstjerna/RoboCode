@@ -5,7 +5,6 @@ import robocode.*;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -144,13 +143,13 @@ public class BaverMain extends AdvancedRobot {
         if (enemyShots.size() == 0)
             return;
 
-        double movableDistance = 200;
+        /*double movableDistance = 200;
         double minTolDistance = 3;
         double eDist = enemyPos.distance(getX(), getY())*1.5;
         Vector2D fwd = new Vector2D(movableDistance*Math.sin(getHeadingRadians()), movableDistance*Math.cos(getHeadingRadians()));
         Vector2D rev = new Vector2D(movableDistance*-1*Math.sin(getHeadingRadians()), movableDistance*-1*Math.cos(getHeadingRadians()));
         fwd.paintVector(g, getX(), getY(), Color.GREEN);
-        rev.paintVector(g, getX(), getY(), Color.GREEN);
+        rev.paintVector(g, getX(), getY(), Color.GREEN);*/
 
         Shot mostRecent = enemyShots.get(enemyShots.size() - 1);
         List<Shot> matched = getBestMatchedShots(mostRecent, 10);
@@ -159,26 +158,27 @@ public class BaverMain extends AdvancedRobot {
             double ER_bearingRad = er.getHeadingRadians();
 
             double angle = ER_bearingRad - Math.toRadians(matched.get(i).getEnemyDeltaAngle());
-            double currDistance = mostRecent.getTimeAlive() * (20 - 3 * 3);
+            double currDistance = mostRecent.getTimeAlive() * (20 - 3 * mostRecent.getPower());
             Point2D.Double hitPoint = new Point2D.Double(
                     mostRecent.getEnemyPointAtFire().getX() + currDistance * Math.sin(angle),
                     mostRecent.getEnemyPointAtFire().getY() + currDistance * Math.cos(angle));
 
-            Vector2D eb = new Vector2D(eDist * Math.sin(angle), eDist * Math.cos(angle));
+            g.setColor(new Color(255 - i*20, i*20, 0));
+            g.fillRoundRect((int) hitPoint.getX(), (int) hitPoint.getY(), 10, 10, 10, 10);
+
+/*            Vector2D eb = new Vector2D(eDist * Math.sin(angle), eDist * Math.cos(angle));
 
             Point2D.Double intersectionfw = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), fwd, eb, minTolDistance);
             Point2D.Double intersectionrv = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), rev, eb, minTolDistance);
 
-            g.setColor(new Color(255 - i*20, i*20, 0));
+
             if(intersectionfw != null){
                 g.fillRect((int)intersectionfw.getX(), (int)intersectionfw.getY(), 10, 10);
             }
 
             if(intersectionrv != null){
                 g.fillRect((int)intersectionrv.getX(), (int)intersectionrv.getY(), 10, 10);
-            }
-
-            g.fillRoundRect((int) hitPoint.getX(), (int) hitPoint.getY(), 10, 10, 10, 10);
+            }*/
         }
 
         g.drawString("Hit rate: " + learningGun.getHitRate() * 100 + "%", 10, 45);
@@ -190,7 +190,7 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private void avoid(ScannedRobotEvent e) {
-        if (detectShot(e) && getDistanceToWall() > Reference.WALL_LIMIT)
+        if (detectShot(e))
             dodgeBullet();
     }
 
@@ -242,8 +242,8 @@ public class BaverMain extends AdvancedRobot {
         boolean fired = enemyDeltaEnergy < 0;
 
         if (fired) {
-            // System.out.println("Shot registered. Shots: " + enemyShots.size());
-            Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), this);
+            // System.out.println("Shot registered with power " + enemyDeltaEnergy + " . Shots: " + enemyShots.size());
+            Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), enemyDeltaEnergy, this);
             enemyShots.add(shot);
         }
 
@@ -252,15 +252,9 @@ public class BaverMain extends AdvancedRobot {
         return fired;
     }
 
-    private void dodgeBullet() {
+    private void dodgeBullet(){
         if (enemyShots.size() == 0)
             return;
-
-        double movableDistance = 200;
-        double minTolDistance = 3;
-        double eDist = enemyPos.distance(getX(), getY())*1.5;
-        Vector2D fwd = new Vector2D(movableDistance*Math.sin(getHeadingRadians()), movableDistance*Math.cos(getHeadingRadians()));
-        Vector2D rev = new Vector2D(movableDistance*-1*Math.sin(getHeadingRadians()), movableDistance*-1*Math.cos(getHeadingRadians()));
 
         Shot mostRecent = enemyShots.get(enemyShots.size() - 1);
 
@@ -269,24 +263,27 @@ public class BaverMain extends AdvancedRobot {
 
         List<Shot> matched = getBestMatchedShots(mostRecent, 10);
         for (int i = 0; i < matched.size(); i++) {
-            Vector2D eb = getExpectedImpact(mostRecent, matched.get(i));
+            Vector2D er = new Vector2D(mostRecent.getRobotPointAtFire().getX() - mostRecent.getEnemyPointAtFire().getX(), mostRecent.getRobotPointAtFire().getY() - mostRecent.getEnemyPointAtFire().getY());
+            double ER_bearingRad = er.getHeadingRadians();
 
-            Point2D.Double intersectionfw = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), fwd, eb, minTolDistance);
-            Point2D.Double intersectionrv = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), rev, eb, minTolDistance);
+            double angle = ER_bearingRad - Math.toRadians(matched.get(i).getEnemyDeltaAngle());
+            double currDistance = mostRecent.getTimeAlive() * (20 - 3 * mostRecent.getPower());
+            Point2D.Double hitPoint = new Point2D.Double(
+                    mostRecent.getEnemyPointAtFire().getX() + currDistance * Math.sin(angle),
+                    mostRecent.getEnemyPointAtFire().getY() + currDistance * Math.cos(angle));
 
-            if(intersectionfw != null)
-                nFwd += (1/((double)i + 1));
+            if(isInFront(hitPoint.getX(), hitPoint.getY()))
+                nFwd += matched.size() - i;
+            else
+                nRev += matched.size() - i;
 
-            if(intersectionrv != null)
-                nRev += (1/((double)i + 1));
+            //(1/((double)i + 1));
         }
 
         if(nFwd > nRev){
             dir = -1;
         }else
             dir = 1;
-
-        System.out.println("nFwd: " + nFwd + " nRev: " + nRev);
     }
 
     private void registerShot(Bullet b, ScannedRobotEvent e) {
