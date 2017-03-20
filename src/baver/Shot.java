@@ -32,6 +32,8 @@ public class Shot implements Serializable{
     private double enemyDeltaAngle = -1;
     private double distanceToImpact = -1;
     private double power = 0;
+    private int dir = 0;
+    private double relativeBearing = -1;
 
     //Primary constructor
     public Shot(ScannedRobotEvent e, AdvancedRobot robot){
@@ -47,10 +49,12 @@ public class Shot implements Serializable{
     }
 
     //Mainly for registering enemy shots
-    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, double power, AdvancedRobot robot){
+    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, double power, int dir, AdvancedRobot robot){
         this(e, robot);
         enemyPointAtFire = enemyPos;
         this.power = Math.abs(power);
+        this.dir = dir;
+        relativeBearing = e.getBearing()*dir;
     }
 
     //Getting hit by enemy shots
@@ -105,6 +109,8 @@ public class Shot implements Serializable{
         return distance;
     }
 
+    public double getRelativeBearing() {return relativeBearing;}
+
     public Bullet getBullet() {return bullet; }
 
     public double getTurretBearing(){
@@ -131,21 +137,29 @@ public class Shot implements Serializable{
         return enemyDeltaAngle;
     }
 
+    public int getDir(){
+        return dir;
+    }
+
     public double getDistance(Shot shot){
    //     double dBearing = getRadarBearing() - shot.getRadarBearing();
         double dVelocity = getVelocity() - shot.getVelocity();
         double dDistance = 0;
         double dTurretBearing = 0;
         double dDeltaHeading = getDeltaHeading() - shot.getDeltaHeading();
+        int dDir = dir - shot.getDir();
+        double dBearing = 0;
 
         if(distance != -1 && shot.getDistance() != -1)
             dDistance = distance - shot.getDistance();
         if(turretBearing != -1 && shot.getTurretBearing() != -1)
             dTurretBearing = turretBearing - shot.getTurretBearing();
         double dRobVel = robotVelocity - shot.robotVelocity;
+        if(relativeBearing != -1 && shot.getRelativeBearing() != -1)
+            dBearing = relativeBearing - shot.getRelativeBearing();
 
         return Math.sqrt(dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel +
-        dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading);
+        dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading + dDir*dDir + dBearing*dBearing);
     }
 
     states getState(){

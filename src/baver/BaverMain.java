@@ -27,6 +27,7 @@ public class BaverMain extends AdvancedRobot {
     private int dir = 1;
     private double oldEnemyEnergy;
     private double enemyDeltaEnergy = 0;
+    private long lastBulletHitTime = 0;
 
     private Point2D.Double enemyPos = new Point2D.Double();
     private Random rand;
@@ -83,6 +84,7 @@ public class BaverMain extends AdvancedRobot {
     @Override
     public void onBulletHit(BulletHitEvent e) {
         learningGun.registerBulletHit(e.getBullet());
+        lastBulletHitTime = e.getTime();
     }
 
     @Override
@@ -239,11 +241,11 @@ public class BaverMain extends AdvancedRobot {
 
     private boolean detectShot(ScannedRobotEvent e) {
         enemyDeltaEnergy = e.getEnergy() - oldEnemyEnergy;
-        boolean fired = enemyDeltaEnergy < 0;
+        boolean fired = enemyDeltaEnergy < 0 && e.getTime() != lastBulletHitTime;
 
         if (fired) {
             // System.out.println("Shot registered with power " + enemyDeltaEnergy + " . Shots: " + enemyShots.size());
-            Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), enemyDeltaEnergy, this);
+            Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), enemyDeltaEnergy, dir, this);
             enemyShots.add(shot);
         }
 
@@ -272,10 +274,14 @@ public class BaverMain extends AdvancedRobot {
                     mostRecent.getEnemyPointAtFire().getX() + currDistance * Math.sin(angle),
                     mostRecent.getEnemyPointAtFire().getY() + currDistance * Math.cos(angle));
 
-            if(isInFront(hitPoint.getX(), hitPoint.getY()))
-                nFwd += matched.size() - i;
-            else
-                nRev += matched.size() - i;
+            if(isInFront(hitPoint.getX(), hitPoint.getY())) {
+                nFwd += (1 / ((double) i + 1));
+                System.out.println("In front!");
+            }
+            else {
+                nRev += (1 / ((double) i + 1));
+                System.out.println("In back!");
+            }
 
             //(1/((double)i + 1));
         }
@@ -313,10 +319,9 @@ public class BaverMain extends AdvancedRobot {
             }
         } else { //Turn to middle!
             if (angToMid > 90 && angToMid < -90) { //If too close, break
-                //setMaxVelocity(8 - 7 * (1 / getDistanceToWall()));
-                dir = -1;
-            } else
-                dir = 1;
+                setMaxVelocity(8 - 7 * (1 / getDistanceToWall()));
+                //dir = -1;
+            }
             setTurnRight(angToMid);
             setAhead(Reference.WALL_LIMIT * dir);
         }
