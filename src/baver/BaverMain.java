@@ -153,11 +153,12 @@ public class BaverMain extends AdvancedRobot {
         rev.paintVector(g, getX(), getY(), Color.GREEN);
 
         Shot mostRecent = enemyShots.get(enemyShots.size() - 1);
-        for (Shot s : getBestMatchedShots(mostRecent, 10)) {
+        List<Shot> matched = getBestMatchedShots(mostRecent, 10);
+        for (int i = 0; i < matched.size(); i++) {
             Vector2D er = new Vector2D(mostRecent.getRobotPointAtFire().getX() - mostRecent.getEnemyPointAtFire().getX(), mostRecent.getRobotPointAtFire().getY() - mostRecent.getEnemyPointAtFire().getY());
             double ER_bearingRad = er.getHeadingRadians();
 
-            double angle = ER_bearingRad - Math.toRadians(s.getEnemyDeltaAngle());
+            double angle = ER_bearingRad - Math.toRadians(matched.get(i).getEnemyDeltaAngle());
             double currDistance = mostRecent.getTimeAlive() * (20 - 3 * 3);
             Point2D.Double hitPoint = new Point2D.Double(
                     mostRecent.getEnemyPointAtFire().getX() + currDistance * Math.sin(angle),
@@ -168,7 +169,7 @@ public class BaverMain extends AdvancedRobot {
             Point2D.Double intersectionfw = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), fwd, eb, minTolDistance);
             Point2D.Double intersectionrv = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), rev, eb, minTolDistance);
 
-            g.setColor(Color.red);
+            g.setColor(new Color(255 - i*20, i*20, 0));
             if(intersectionfw != null){
                 g.fillRect((int)intersectionfw.getX(), (int)intersectionfw.getY(), 10, 10);
             }
@@ -177,7 +178,6 @@ public class BaverMain extends AdvancedRobot {
                 g.fillRect((int)intersectionrv.getX(), (int)intersectionrv.getY(), 10, 10);
             }
 
-            g.setColor(Color.red);
             g.fillRoundRect((int) hitPoint.getX(), (int) hitPoint.getY(), 10, 10, 10, 10);
         }
 
@@ -264,26 +264,29 @@ public class BaverMain extends AdvancedRobot {
 
         Shot mostRecent = enemyShots.get(enemyShots.size() - 1);
 
-        int nFwd = 0;
-        int nRev = 0;
+        double nFwd = 0;
+        double nRev = 0;
 
-        for (Shot s : getBestMatchedShots(mostRecent, 10)) {
-            Vector2D eb = getExpectedImpact(mostRecent, s);
+        List<Shot> matched = getBestMatchedShots(mostRecent, 10);
+        for (int i = 0; i < matched.size(); i++) {
+            Vector2D eb = getExpectedImpact(mostRecent, matched.get(i));
 
             Point2D.Double intersectionfw = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), fwd, eb, minTolDistance);
             Point2D.Double intersectionrv = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), rev, eb, minTolDistance);
 
             if(intersectionfw != null)
-                nFwd++;
+                nFwd += (1/((double)i + 1));
 
             if(intersectionrv != null)
-                nRev++;
+                nRev += (1/((double)i + 1));
         }
 
         if(nFwd > nRev){
             dir = -1;
         }else
             dir = 1;
+
+        System.out.println("nFwd: " + nFwd + " nRev: " + nRev);
     }
 
     private void registerShot(Bullet b, ScannedRobotEvent e) {
