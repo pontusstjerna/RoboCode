@@ -1,11 +1,9 @@
 package baver;
 
 import pontus.Vector2D;
-import robocode.AdvancedRobot;
-import robocode.Bullet;
-import robocode.HitByBulletEvent;
-import robocode.ScannedRobotEvent;
+import robocode.*;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
 import java.io.Serializable;
 
@@ -34,6 +32,7 @@ public class Shot implements Serializable{
     private double power = 0;
     private int dir = 0;
     private double relativeBearing = -1;
+    private double maxDistance = 0; //I want it to crash if division by zero occurs
 
     //Primary constructor
     public Shot(ScannedRobotEvent e, AdvancedRobot robot){
@@ -44,17 +43,19 @@ public class Shot implements Serializable{
         firedTime = e.getTime();
         robotPointAtFire = new Point2D.Double(robot.getX(), robot.getY());
         robotVelocity = robot.getVelocity();
-        turretBearing = Util.get180(Util.get180(e.getBearing()) - Util.get180(robot.getGunHeading() - robot.getHeading()));
         deltaHeading = Util.get180(robot.getHeading() - e.getHeading());
+        turretBearing = Util.get180(Util.get180(e.getBearing()) - Util.get180(robot.getGunHeading() - robot.getHeading()));
     }
 
     //Mainly for registering enemy shots
-    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, double power, int dir, AdvancedRobot robot){
+    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, double power, int dir, AdvancedRobot robot,
+                double battlefieldWidth, double battlefieldHeight){
         this(e, robot);
         enemyPointAtFire = enemyPos;
         this.power = Math.abs(power);
         this.dir = dir;
         relativeBearing = e.getBearing()*dir;
+        maxDistance = Point.distance(0,0,battlefieldWidth, battlefieldHeight);
     }
 
     //Getting hit by enemy shots
@@ -69,6 +70,7 @@ public class Shot implements Serializable{
     //Registering fired shots
     public Shot(ScannedRobotEvent e, AdvancedRobot robot, Bullet b){
         this(e, robot);
+
         bullet = b;
     }
 
@@ -143,20 +145,23 @@ public class Shot implements Serializable{
 
     public double getDistance(Shot shot){
    //     double dBearing = getRadarBearing() - shot.getRadarBearing();
-        double dVelocity = getVelocity() - shot.getVelocity();
+        double dVelocity = (velocity - shot.velocity)/ (Rules.MAX_VELOCITY*2);
+        double dRobVel = (robotVelocity - shot.robotVelocity)/(Rules.MAX_VELOCITY*2);
         double dDistance = 0;
         double dTurretBearing = 0;
-        double dDeltaHeading = getDeltaHeading() - shot.getDeltaHeading();
+        double dDeltaHeading = (deltaHeading - shot.deltaHeading)/Reference.MAX_DELTA_HEADING;
         int dDir = dir - shot.getDir();
         double dBearing = 0;
 
-        if(distance != -1 && shot.getDistance() != -1)
-            dDistance = distance - shot.getDistance();
-        if(turretBearing != -1 && shot.getTurretBearing() != -1)
-            dTurretBearing = turretBearing - shot.getTurretBearing();
-        double dRobVel = robotVelocity - shot.robotVelocity;
-        if(relativeBearing != -1 && shot.getRelativeBearing() != -1)
-            dBearing = relativeBearing - shot.getRelativeBearing();
+        //Here everything should be normalized
+
+
+        if(distance != -1 && shot.distance != -1)
+            dDistance = (distance - shot.distance)/maxDistance;
+        if(turretBearing != -1 && shot.turretBearing != -1)
+            dTurretBearing = (turretBearing - shot.turretBearing)/Reference.MAX_DELTA_HEADING;
+        if(relativeBearing != -1 && shot.relativeBearing != -1)
+            dBearing = (relativeBearing - shot.relativeBearing)/Reference.MAX_DELTA_HEADING;
 
         return Math.sqrt(dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel +
         dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading + dDir*dDir + dBearing*dBearing);

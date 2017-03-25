@@ -10,4 +10,11 @@ public final class Reference {
     public static final int MIN_DISTANCE = 200;
     public static final double WALL_LIMIT = 100;
     public static final double AIM_LIMIT = 0.5;
+
+    /*
+    return Math.sqrt(dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel +
+        dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading + dDir*dDir + dBearing*dBearing);
+     */
+
+    public static final int MAX_DELTA_HEADING = 180;
 }

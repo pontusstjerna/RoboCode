@@ -222,30 +222,13 @@ public class BaverMain extends AdvancedRobot {
         return null;
     }
 
-    private Point2D.Double getIntersection(Point2D.Double startA, Point2D.Double startB, Vector2D a, Vector2D b, double threshold){
-        double aHeading = a.getHeadingRadians();
-        double bHeading = b.getHeadingRadians();
-        for(double i = 0; i < a.getLength(); i += threshold*0.5){
-            for(double j = 0; j < b.getLength(); j += threshold*0.5){
-                if(Point.distance(
-                        startA.getX() + i*Math.sin(aHeading), startA.getY() + i*Math.cos(aHeading),
-                        startB.getX() + j*Math.sin(bHeading), startB.getY() + j*Math.cos(bHeading))
-                        <= threshold){
-                    return new Point2D.Double(startA.getX() + i*Math.sin(aHeading), startA.getY() + i*Math.cos(aHeading));
-                }
-            }
-        }
-
-        return null;
-    }
-
     private boolean detectShot(ScannedRobotEvent e) {
         enemyDeltaEnergy = e.getEnergy() - oldEnemyEnergy;
         boolean fired = enemyDeltaEnergy < 0 && e.getTime() != lastBulletHitTime;
 
         if (fired) {
             // System.out.println("Shot registered with power " + enemyDeltaEnergy + " . Shots: " + enemyShots.size());
-            Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), enemyDeltaEnergy, dir, this);
+            Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), enemyDeltaEnergy, dir, this, getBattleFieldWidth(), getBattleFieldHeight());
             enemyShots.add(shot);
         }
 
