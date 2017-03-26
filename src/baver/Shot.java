@@ -9,6 +9,7 @@ import baver.WeightSet.Weights;
 import java.awt.*;
 import java.awt.geom.Point2D;
 import java.io.Serializable;
+import java.sql.Ref;
 
 /**
  * Created by pontu on 2017-02-27.
@@ -33,10 +34,11 @@ public class Shot implements Serializable{
     private double enemyDeltaAngle = -1;
     private double distanceToImpact = -1;
     private double power = 0;
-    private int robDir = 0;
+    private double robDir = 0;
     private double enemyDir = 0;
     private double relativeBearing = -1;
     private double maxDistance = 0; //I want it to crash if division by zero occurs
+    private boolean firedByMachineLearning = false;
 
     //Primary constructor
     public Shot(ScannedRobotEvent e, AdvancedRobot robot){
@@ -50,17 +52,16 @@ public class Shot implements Serializable{
         deltaHeading = Util.get180(robot.getHeading() - e.getHeading());
         turretBearing = Util.get180(Util.get180(e.getBearing()) - Util.get180(robot.getGunHeading() - robot.getHeading()));
         enemyDir = Math.signum(e.getVelocity());
+        robDir = Math.signum(robot.getVelocity());
+        maxDistance = Point.distance(0,0, Reference.BATTLEFIELD_WIDTH, Reference.BATTLEFIELD_HEIGHT);
     }
 
     //Mainly for registering enemy shots
-    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, double power, int dir, AdvancedRobot robot,
-                double battlefieldWidth, double battlefieldHeight){
+    public Shot(ScannedRobotEvent e, Point2D.Double enemyPos, double power, AdvancedRobot robot){
         this(e, robot);
         enemyPointAtFire = enemyPos;
         this.power = Math.abs(power);
-        this.robDir = dir;
-        relativeBearing = e.getBearing()*dir;
-        maxDistance = Point.distance(0,0,battlefieldWidth, battlefieldHeight);
+        relativeBearing = e.getBearing()*robDir;
     }
 
     //Getting hit by enemy shots
@@ -73,9 +74,9 @@ public class Shot implements Serializable{
     }
 
     //Registering fired shots
-    public Shot(ScannedRobotEvent e, AdvancedRobot robot, Bullet b){
+    public Shot(ScannedRobotEvent e, AdvancedRobot robot, Bullet b, boolean usingMachineLearning){
         this(e, robot);
-
+        firedByMachineLearning = usingMachineLearning;
         bullet = b;
     }
 
@@ -144,29 +145,35 @@ public class Shot implements Serializable{
         return enemyDeltaAngle;
     }
 
-    public int getRobDir(){
+    public double getRobDir(){
         return robDir;
     }
 
+    public double getEnemyDir() {return enemyDir;}
+
+    public double getFriendlyVelocity(){ return robotVelocity; }
+
+    public boolean isFiredByMachineLearning(){ return firedByMachineLearning;}
+
     public double getDistance(Shot shot, WeightSet weights){
-        double dVelocity = (velocity - shot.velocity)/ (Rules.MAX_VELOCITY*2);
-        double dRobVel = (robotVelocity - shot.robotVelocity)/(Rules.MAX_VELOCITY*2);
+        double dVelocity = (velocity - shot.getVelocity())/ (Rules.MAX_VELOCITY*2);
+        double dRobVel = (robotVelocity - shot.getFriendlyVelocity())/(Rules.MAX_VELOCITY*2);
         double dDistance = 0;
         double dTurretBearing = 0;
-        double dDeltaHeading = (deltaHeading - shot.deltaHeading)/Reference.MAX_DELTA_HEADING;
-        double dDir = (robDir - shot.robDir)/(double)2;
-        double dEnemyDir = (enemyDir - shot.enemyDir)/2;
+        double dDeltaHeading = (deltaHeading - shot.getDeltaHeading())/Reference.MAX_DELTA_HEADING;
+        double dDir = (robDir - shot.getRobDir())/(double)2;
+        double dEnemyDir = (enemyDir - shot.getEnemyDir())/(double)2;
         double dBearing = 0;
 
         //Here everything should be normalized
 
 
-        if(distance != -1 && shot.distance != -1)
-            dDistance = (distance - shot.distance)/maxDistance;
-        if(turretBearing != -1 && shot.turretBearing != -1)
-            dTurretBearing = (turretBearing - shot.turretBearing)/Reference.MAX_DELTA_HEADING;
-        if(relativeBearing != -1 && shot.relativeBearing != -1)
-            dBearing = (relativeBearing - shot.relativeBearing)/Reference.MAX_DELTA_HEADING;
+        if(distance != -1 && shot.getDistanceBetweenRobots() != -1)
+            dDistance = (distance - shot.getDistanceBetweenRobots())/maxDistance;
+        if(turretBearing != -1 && shot.getTurretBearing() != -1)
+            dTurretBearing = (turretBearing - shot.getTurretBearing())/Reference.MAX_DELTA_HEADING;
+        if(relativeBearing != -1 && shot.getRelativeBearing() != -1)
+            dBearing = (relativeBearing - shot.getRelativeBearing())/Reference.MAX_DELTA_HEADING*2;
 
 
         //Add weights
@@ -178,6 +185,9 @@ public class Shot implements Serializable{
         dDir *= weights.getWeight(Weights.FRIENDLY_DIRECTION);
         dBearing *= weights.getWeight(Weights.BEARING_DIFFERENCE);
         dEnemyDir *= weights.getWeight(Weights.ENEMY_DIRECTION);
+
+       // System.out.println("dvel: " + dVelocity + " dDist: " + dDistance + " dRobVel: " + dRobVel + " dTurrBear: " + dTurretBearing);
+       // System.out.println("dHead: " + dDeltaHeading + " dDir: " + dDir + " dBear: " + dBearing + " dEDir: " + dEnemyDir);
 
         return Math.sqrt(dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel +
         dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading + dDir*dDir + dBearing*dBearing + dEnemyDir*dEnemyDir);

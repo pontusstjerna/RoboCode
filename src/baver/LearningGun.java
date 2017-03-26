@@ -36,7 +36,7 @@ public class LearningGun {
     //No it doesn't
     public double aimAndFire(ScannedRobotEvent e){
         if(robot.getGunTurnRemaining() < Reference.AIM_LIMIT && robot.getGunHeat() == 0 && e.getEnergy() > 0)
-            registerBullet(e, robot.setFireBullet(Reference.FIREPOWER));
+            registerBullet(e, robot.setFireBullet(Reference.FIREPOWER), true);
 
         turnToTarget(e);
         return 1;
@@ -53,8 +53,8 @@ public class LearningGun {
         return active;
     }
 
-    public void registerBullet(ScannedRobotEvent e, Bullet b){
-        Shot newShot = new Shot(e, robot, b);
+    public void registerBullet(ScannedRobotEvent e, Bullet b, boolean usingLearningGun){
+        Shot newShot = new Shot(e, robot, b, usingLearningGun);
         shots.add(newShot);
 
       //  System.out.println("Turret bearing: " + newShot.getTurretBearing());
@@ -69,19 +69,57 @@ public class LearningGun {
                 totalNotInAir;
     }
 
+    public double getLearningGunHitRate(){
+        long totalNotInAir = shots.stream().filter(x -> x.getState() != Shot.states.IN_AIR && x.isFiredByMachineLearning()).count();
+
+        if(totalNotInAir < 2)
+            return 0;
+
+        return ((double)(shots.stream().filter(x -> x.getState() == Shot.states.HIT && x.isFiredByMachineLearning()).count()))/
+                totalNotInAir;
+    }
+
+    public double getAngleGunHitRate(){
+        long totalNotInAir = shots.stream().filter(x -> x.getState() != Shot.states.IN_AIR && !x.isFiredByMachineLearning()).count();
+
+        if(totalNotInAir < 2)
+            return 0;
+
+        return ((double)(shots.stream().filter(x -> x.getState() == Shot.states.HIT && !x.isFiredByMachineLearning()).count()))/
+                totalNotInAir;
+    }
+
     public int getShotsSize(){
         return shots.size();
     }
-    public long getHitShots() { return shots.stream().filter(x -> x.getState() == Shot.states.HIT).count();}
+    public long getHitShotsCount() { return shots.stream().filter(x -> x.getState() == Shot.states.HIT).count();}
+    public double getHighestHitDistance() {
+        Optional<Shot> highestDistance = shots.stream().filter(x -> x.getState() == Shot.states.HIT).
+                sorted((x,y) -> x.getDistanceBetweenRobots() > y.getDistanceBetweenRobots() ? -1 : 1).findFirst();
+
+        if(highestDistance.isPresent())
+            return highestDistance.get().getDistanceBetweenRobots();
+        else return 0;
+    }
+    //sorted((x,y) -> x.getDistance(shot, aimingWeights) < y.getDistance(shot, aimingWeights) ? -1 : 1).findFirst();
 
     public void paintExpectations(Graphics g){
-        if(currentBestMatched != null)
+        if(currentBestMatched != null) {
             new Vector2D(
-                    currentBestMatched.getDistanceBetweenRobots()*
+                    currentBestMatched.getDistanceBetweenRobots() *
                             Math.sin(robot.getGunHeadingRadians() + Math.toRadians(deltaTurretAngle)),
-                    currentBestMatched.getDistanceBetweenRobots()*
+                    currentBestMatched.getDistanceBetweenRobots() *
                             Math.cos(robot.getGunHeadingRadians() + Math.toRadians(deltaTurretAngle))
-            ).paintVector((Graphics2D)g, robot.getX(), robot.getY(), new Color(253, 255, 52));
+            ).paintVector((Graphics2D) g, robot.getX(), robot.getY(), new Color(253, 255, 52));
+
+            g.drawRect((int)(robot.getX() + currentBestMatched.getDistanceBetweenRobots() *
+                            Math.sin(Math.toRadians(robot.getGunHeading()))),
+                        (int)(robot.getY() + currentBestMatched.getDistanceBetweenRobots() *
+                            Math.cos(Math.toRadians(robot.getGunHeading()))),
+                    20, 20);
+
+            System.out.println("Gun bearing: " + currentBestMatched.getTurretBearing());
+        }
     }
 
     public void saveShots(){

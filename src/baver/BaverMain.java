@@ -52,6 +52,8 @@ public class BaverMain extends AdvancedRobot {
         enemyShots = loadPreviousShots();
         rand = new Random();
         avoidWeights = new WeightSet(Reference.AVOIDING_WEIGHTS);
+        Reference.BATTLEFIELD_WIDTH = getBattleFieldWidth();
+        Reference.BATTLEFIELD_HEIGHT = getBattleFieldHeight();
 
         while (true) {
             if (lockTicks >= Reference.LOCK_TIMEOUT) {
@@ -78,7 +80,7 @@ public class BaverMain extends AdvancedRobot {
         keepDistance(e);
 
         //Shooting
-         attack(e);
+        attack(e);
 
         enemyShots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.update());
         scan();
@@ -108,7 +110,11 @@ public class BaverMain extends AdvancedRobot {
 
     @Override
     public void onHitWall(HitWallEvent e) {
-        dir = -dir;
+        setStop();
+        double angToMid = getAngleToMiddle();
+        setTurnRight(angToMid);
+        setAhead(Reference.WALL_LIMIT);
+        setResume();
     }
 
     @Override
@@ -148,14 +154,6 @@ public class BaverMain extends AdvancedRobot {
         if (enemyShots.size() == 0)
             return;
 
-        /*double movableDistance = 200;
-        double minTolDistance = 3;
-        double eDist = enemyPos.distance(getX(), getY())*1.5;
-        Vector2D fwd = new Vector2D(movableDistance*Math.sin(getHeadingRadians()), movableDistance*Math.cos(getHeadingRadians()));
-        Vector2D rev = new Vector2D(movableDistance*-1*Math.sin(getHeadingRadians()), movableDistance*-1*Math.cos(getHeadingRadians()));
-        fwd.paintVector(g, getX(), getY(), Color.GREEN);
-        rev.paintVector(g, getX(), getY(), Color.GREEN);*/
-
         Shot mostRecent = enemyShots.get(enemyShots.size() - 1);
         List<Shot> matched = getBestMatchedShots(mostRecent, 10);
         for (int i = 0; i < matched.size(); i++) {
@@ -168,25 +166,14 @@ public class BaverMain extends AdvancedRobot {
                     mostRecent.getEnemyPointAtFire().getX() + currDistance * Math.sin(angle),
                     mostRecent.getEnemyPointAtFire().getY() + currDistance * Math.cos(angle));
 
-            g.setColor(new Color(255 - i*20, i*20, 0));
+            g.setColor(new Color(255 - i * 20, i * 20, 0));
             g.fillRoundRect((int) hitPoint.getX(), (int) hitPoint.getY(), 10, 10, 10, 10);
-
-/*            Vector2D eb = new Vector2D(eDist * Math.sin(angle), eDist * Math.cos(angle));
-
-            Point2D.Double intersectionfw = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), fwd, eb, minTolDistance);
-            Point2D.Double intersectionrv = getIntersection(new Point2D.Double(getX(), getY()), mostRecent.getEnemyPointAtFire(), rev, eb, minTolDistance);
-
-
-            if(intersectionfw != null){
-                g.fillRect((int)intersectionfw.getX(), (int)intersectionfw.getY(), 10, 10);
-            }
-
-            if(intersectionrv != null){
-                g.fillRect((int)intersectionrv.getX(), (int)intersectionrv.getY(), 10, 10);
-            }*/
         }
 
-        g.drawString("Hit rate: " + learningGun.getHitRate() * 100 + "%", 10, 45);
+        g.drawString("Hit shots: " + learningGun.getHitShotsCount(), 10, 90);
+        g.drawString("Overall hit rate: " + (int)(learningGun.getHitRate() * 100) + "%", 10, 75);
+        g.drawString("AngleGun hit rate: " + (int)(learningGun.getAngleGunHitRate() * 100) + "%", 10, 60);
+        g.drawString("LearningGun hit rate: " + (int)(learningGun.getLearningGunHitRate() * 100) + "%", 10, 45);
 
         if (angleGun.isActive())
             angleGun.paintGun(g);
@@ -200,19 +187,20 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private void attack(ScannedRobotEvent e) {
-        angleGun.setActive(learningGun.getHitShots() < 2 || learningGun.getMissCount() > 3);
+        angleGun.setActive(learningGun.getHitShotsCount() < Reference.REQUIRED_HIT_LIMIT ||
+                learningGun.getMissCount() > 3 || learningGun.getHighestHitDistance() < e.getDistance());
         learningGun.setActive(!angleGun.isActive());
 
         if (angleGun.isActive()) {
             Bullet b = angleGun.fire(e);
             if (b != null)
-                learningGun.registerBullet(e, b);
+                learningGun.registerBullet(e, b, false);
             angleGun.lockToEnemy(e);
         } else
             learningGun.aimAndFire(e);
     }
 
-    private Point2D.Double getIntersection(Vector2D a, Vector2D b, Point2D.Double aStart, Point2D.Double bStart){
+    private Point2D.Double getIntersection(Vector2D a, Vector2D b, Point2D.Double aStart, Point2D.Double bStart) {
         //Algorithm from http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 
         Vector2D p = new Vector2D(aStart.getX(), aStart.getY());
@@ -220,7 +208,7 @@ public class BaverMain extends AdvancedRobot {
         double r = Vector2D.getLength(a);
         double s = Vector2D.getLength(b);
 
-      //  double t = Vector2D.sub(q,p).dot()
+        //  double t = Vector2D.sub(q,p).dot()
 
         return null;
     }
@@ -231,7 +219,7 @@ public class BaverMain extends AdvancedRobot {
 
         if (fired) {
             // System.out.println("Shot registered with power " + enemyDeltaEnergy + " . Shots: " + enemyShots.size());
-            Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), enemyDeltaEnergy, dir, this, getBattleFieldWidth(), getBattleFieldHeight());
+            Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), enemyDeltaEnergy, this);
             enemyShots.add(shot);
         }
 
@@ -240,7 +228,7 @@ public class BaverMain extends AdvancedRobot {
         return fired;
     }
 
-    private void dodgeBullet(){
+    private void dodgeBullet() {
         if (enemyShots.size() == 0)
             return;
 
@@ -260,21 +248,20 @@ public class BaverMain extends AdvancedRobot {
                     mostRecent.getEnemyPointAtFire().getX() + currDistance * Math.sin(angle),
                     mostRecent.getEnemyPointAtFire().getY() + currDistance * Math.cos(angle));
 
-            if(isInFront(hitPoint.getX(), hitPoint.getY())) {
+            if (isInFront(hitPoint.getX(), hitPoint.getY())) {
                 nFwd += (1 / ((double) i + 1));
-                System.out.println("In front!");
-            }
-            else {
+             //   System.out.println("In front!");
+            } else {
                 nRev += (1 / ((double) i + 1));
-                System.out.println("In back!");
+               // System.out.println("In back!");
             }
 
             //(1/((double)i + 1));
         }
 
-        if(nFwd > nRev){
+        if (nFwd > nRev) {
             dir = -1;
-        }else
+        } else
             dir = 1;
     }
 
@@ -288,28 +275,17 @@ public class BaverMain extends AdvancedRobot {
         double distWall = getDistanceToWall();
         double angToMid = getAngleToMiddle();
         double percentToWall = getDistanceToMiddle() / distWall;
-        double additionalTurnToMiddle = angToMid * percentToWall * 0;
-        boolean inFront = isInFront(enemyPos.getX(), enemyPos.getY());
+        double additionalTurnToMiddle = angToMid * percentToWall;
 
-        if (distWall > Reference.WALL_LIMIT || e.getEnergy() == 0) { //If not close to any wall
-            setMaxVelocity(8);
-            if (e.getEnergy() == 0) { //If component disabled
-                setTurnRight(e.getBearing() * dir);
-                setAhead(500 * dir);
-            } else if (e.getDistance() < Reference.MIN_DISTANCE) { //If too close to the enemy
-                setTurnRight(e.getBearing() * dir - 160 + additionalTurnToMiddle * dir);
-                //if(inFront) dir = -1;
-                //else dir = 1;
-            } else { //If in the perfect distance interval
-                setTurnRight((e.getBearing() - 90 + additionalTurnToMiddle * dir));
+        if (e.getEnergy() == 0) { //If component disabled
+            setTurnRight(e.getBearing() * dir);
+            if(e.getBearing() < 3){
+                setAhead(500*dir);
             }
-        } else { //Turn to middle!
-            if (angToMid > 90 && angToMid < -90) { //If too close, break
-                setMaxVelocity(8 - 7 * (1 / getDistanceToWall()));
-                //dir = -1;
-            }
-            setTurnRight(angToMid);
-            setAhead(Reference.WALL_LIMIT * dir);
+        } else if (false && e.getDistance() < Reference.MIN_DISTANCE) { //If too close to the enemy
+            setTurnRight(e.getBearing() * dir - 160*dir + additionalTurnToMiddle * dir);
+        } else { //If in the perfect distance interval
+            setTurnRight((e.getBearing() - 90*dir + additionalTurnToMiddle));
         }
         setAhead((rand.nextInt(200) + 70) * dir);
     }
@@ -336,7 +312,7 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private Vector2D getExpectedImpact(Shot justFired, Shot oldShot) {
-        double eDist = enemyPos.distance(getX(), getY())*1.5;
+        double eDist = enemyPos.distance(getX(), getY()) * 1.5;
         Vector2D er = new Vector2D(justFired.getRobotPointAtFire().getX() - justFired.getEnemyPointAtFire().getX(),
                 justFired.getRobotPointAtFire().getY() - justFired.getEnemyPointAtFire().getY());
         double ER_bearingRad = er.getHeadingRadians();
@@ -376,7 +352,7 @@ public class BaverMain extends AdvancedRobot {
 
         Vector2D toMiddle = new Vector2D(dx, dy);
 
-        double angle = Util.get180(toMiddle.getHeading() - Util.get180(getHeading()));
+        double angle = Util.get180(toMiddle.getHeading()*dir - Util.get180(getHeading()*dir));
         return angle;
     }
 
