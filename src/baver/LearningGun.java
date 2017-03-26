@@ -1,6 +1,6 @@
 package baver;
 
-import pontus.Vector2D;
+import Util.Vector2D;
 import robocode.AdvancedRobot;
 import robocode.Bullet;
 import robocode.RobocodeFileOutputStream;
@@ -11,8 +11,6 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Created by pontu on 2017-03-08.
@@ -25,10 +23,13 @@ public class LearningGun {
     private double deltaTurretAngle = 0;
     private boolean active = false;
     private int missCount = 0;
+    private WeightSet aimingWeights;
 
     public LearningGun(AdvancedRobot robot){
         this.robot = robot;
         shots = loadPreviousShots();
+
+        aimingWeights = new WeightSet(Reference.AIMING_WEIGHTS);
     }
 
     //Returns between 0 and 1 on how sure it is
@@ -76,9 +77,9 @@ public class LearningGun {
     public void paintExpectations(Graphics g){
         if(currentBestMatched != null)
             new Vector2D(
-                    currentBestMatched.getDistance()*
+                    currentBestMatched.getDistanceBetweenRobots()*
                             Math.sin(robot.getGunHeadingRadians() + Math.toRadians(deltaTurretAngle)),
-                    currentBestMatched.getDistance()*
+                    currentBestMatched.getDistanceBetweenRobots()*
                             Math.cos(robot.getGunHeadingRadians() + Math.toRadians(deltaTurretAngle))
             ).paintVector((Graphics2D)g, robot.getX(), robot.getY(), new Color(253, 255, 52));
     }
@@ -153,7 +154,7 @@ public class LearningGun {
 
     private Shot getBestMatched(Shot shot){
         Optional<Shot> bestMatch = shots.stream().filter(s -> s.getState() == Shot.states.HIT).
-                sorted((x,y) -> x.getDistance(shot) < y.getDistance(shot) ? -1 : 1).findFirst();
+                sorted((x,y) -> x.getDistance(shot, aimingWeights) < y.getDistance(shot, aimingWeights) ? -1 : 1).findFirst();
         if(bestMatch.isPresent())
             return bestMatch.get();
 

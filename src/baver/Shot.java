@@ -1,7 +1,10 @@
 package baver;
 
-import pontus.Vector2D;
+import Util.Util;
+import Util.Vector2D;
 import robocode.*;
+
+import baver.WeightSet.Weights;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
@@ -30,7 +33,8 @@ public class Shot implements Serializable{
     private double enemyDeltaAngle = -1;
     private double distanceToImpact = -1;
     private double power = 0;
-    private int dir = 0;
+    private int robDir = 0;
+    private double enemyDir = 0;
     private double relativeBearing = -1;
     private double maxDistance = 0; //I want it to crash if division by zero occurs
 
@@ -45,6 +49,7 @@ public class Shot implements Serializable{
         robotVelocity = robot.getVelocity();
         deltaHeading = Util.get180(robot.getHeading() - e.getHeading());
         turretBearing = Util.get180(Util.get180(e.getBearing()) - Util.get180(robot.getGunHeading() - robot.getHeading()));
+        enemyDir = Math.signum(e.getVelocity());
     }
 
     //Mainly for registering enemy shots
@@ -53,7 +58,7 @@ public class Shot implements Serializable{
         this(e, robot);
         enemyPointAtFire = enemyPos;
         this.power = Math.abs(power);
-        this.dir = dir;
+        this.robDir = dir;
         relativeBearing = e.getBearing()*dir;
         maxDistance = Point.distance(0,0,battlefieldWidth, battlefieldHeight);
     }
@@ -107,7 +112,7 @@ public class Shot implements Serializable{
 
     public double getDeltaHeading() {return deltaHeading;}
 
-    public double getDistance(){
+    public double getDistanceBetweenRobots(){
         return distance;
     }
 
@@ -139,18 +144,18 @@ public class Shot implements Serializable{
         return enemyDeltaAngle;
     }
 
-    public int getDir(){
-        return dir;
+    public int getRobDir(){
+        return robDir;
     }
 
-    public double getDistance(Shot shot){
-   //     double dBearing = getRadarBearing() - shot.getRadarBearing();
+    public double getDistance(Shot shot, WeightSet weights){
         double dVelocity = (velocity - shot.velocity)/ (Rules.MAX_VELOCITY*2);
         double dRobVel = (robotVelocity - shot.robotVelocity)/(Rules.MAX_VELOCITY*2);
         double dDistance = 0;
         double dTurretBearing = 0;
         double dDeltaHeading = (deltaHeading - shot.deltaHeading)/Reference.MAX_DELTA_HEADING;
-        int dDir = dir - shot.getDir();
+        double dDir = (robDir - shot.robDir)/(double)2;
+        double dEnemyDir = (enemyDir - shot.enemyDir)/2;
         double dBearing = 0;
 
         //Here everything should be normalized
@@ -163,8 +168,23 @@ public class Shot implements Serializable{
         if(relativeBearing != -1 && shot.relativeBearing != -1)
             dBearing = (relativeBearing - shot.relativeBearing)/Reference.MAX_DELTA_HEADING;
 
+
+        //Add weights
+        dVelocity *= weights.getWeight(Weights.ENEMY_VELOCITY);
+        dDistance *= weights.getWeight(Weights.DISTANCE_BETWEEN_ROBOTS);
+        dRobVel *= weights.getWeight(Weights.FRIENDLY_VELOCITY);
+        dTurretBearing *= weights.getWeight(Weights.BEARING_FROM_TURRET);
+        dDeltaHeading *= weights.getWeight(Weights.HEADING_DIFFERENCE);
+        dDir *= weights.getWeight(Weights.FRIENDLY_DIRECTION);
+        dBearing *= weights.getWeight(Weights.BEARING_DIFFERENCE);
+        dEnemyDir *= weights.getWeight(Weights.ENEMY_DIRECTION);
+
         return Math.sqrt(dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel +
-        dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading + dDir*dDir + dBearing*dBearing);
+        dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading + dDir*dDir + dBearing*dBearing + dEnemyDir*dEnemyDir);
+    }
+
+    public double getDistance(Shot shot){
+        return getDistance(shot, new WeightSet());
     }
 
     states getState(){

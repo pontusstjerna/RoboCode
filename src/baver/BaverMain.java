@@ -1,6 +1,7 @@
 package baver;
 
-import pontus.Vector2D;
+import Util.Util;
+import Util.Vector2D;
 import robocode.*;
 
 import java.awt.*;
@@ -33,6 +34,7 @@ public class BaverMain extends AdvancedRobot {
     private Random rand;
 
     private List<Shot> enemyShots;
+    private WeightSet avoidWeights;
 
     @Override
     public void run() {
@@ -49,6 +51,7 @@ public class BaverMain extends AdvancedRobot {
         learningGun = new LearningGun(this);
         enemyShots = loadPreviousShots();
         rand = new Random();
+        avoidWeights = new WeightSet(Reference.AVOIDING_WEIGHTS);
 
         while (true) {
             if (lockTicks >= Reference.LOCK_TIMEOUT) {
@@ -328,7 +331,7 @@ public class BaverMain extends AdvancedRobot {
     private List<Shot> getBestMatchedShots(Shot shot, int maxSize) {
         Stream<Shot> bestMatched = enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT);
 
-        bestMatched = bestMatched.sorted((x, y) -> x.getDistance(shot) < y.getDistance(shot) ? -1 : 1);
+        bestMatched = bestMatched.sorted((x, y) -> x.getDistance(shot, avoidWeights) < y.getDistance(shot, avoidWeights) ? -1 : 1);
         return bestMatched.limit(maxSize).collect(Collectors.toList());
     }
 

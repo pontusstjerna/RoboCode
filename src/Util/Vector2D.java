@@ -1,4 +1,4 @@
-package pontus;
+package Util;
 
 import java.awt.*;
 import java.util.Vector;

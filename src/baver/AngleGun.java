@@ -1,6 +1,7 @@
 package baver;
 
-import pontus.Vector2D;
+import Util.Util;
+import Util.Vector2D;
 import robocode.AdvancedRobot;
 import robocode.Bullet;
 import robocode.ScannedRobotEvent;
@@ -36,7 +37,7 @@ public class AngleGun {
 
         deltaAngle = Util.get180(toHitPoint.getHeading() - robot.getGunHeading());
 
-        //additional = e.getDistance()*0.024*Math.signum(deltaAngle);
+        //additional = e.getDistanceBetweenRobots()*0.024*Math.signum(deltaAngle);
 
         if(deltaAngle < 180 && deltaAngle > -180){
             robot.setTurnGunRight(deltaAngle);

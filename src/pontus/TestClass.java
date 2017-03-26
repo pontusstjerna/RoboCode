@@ -1,5 +1,7 @@
 package pontus;
 
+import Util.Vector2D;
+
 /**
  * Created by Pontus on 2016-02-07.
  */

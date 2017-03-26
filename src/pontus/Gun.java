@@ -1,5 +1,6 @@
 package pontus;
 
+import Util.Vector2D;
 import robocode.Bullet;
 import robocode.ScannedRobotEvent;
 
@@ -48,7 +49,7 @@ public class Gun {
 
 
 
-        //additional = e.getDistance()*0.024*Math.signum(deltaAngle);
+        //additional = e.getDistanceBetweenRobots()*0.024*Math.signum(deltaAngle);
 
         if(deltaAngle < 180 && deltaAngle > -180){
             korven.setTurnGunRight(deltaAngle);

@@ -11,10 +11,27 @@ public final class Reference {
     public static final double WALL_LIMIT = 100;
     public static final double AIM_LIMIT = 0.5;
 
-    /*
-    return Math.sqrt(dVelocity*dVelocity + dDistance*dDistance + dRobVel*dRobVel +
-        dTurretBearing*dTurretBearing + dDeltaHeading*dDeltaHeading + dDir*dDir + dBearing*dBearing);
-     */
-
     public static final int MAX_DELTA_HEADING = 180;
+
+    public static final double[] AIMING_WEIGHTS = {
+            1, //ENEMY_VELOCITY
+            1, //DISTANCE_BETWEEN_ROBOTS
+            1, //FRIENDLY_VELOCITY
+            1, //BEARING_FROM_TURRET
+            1, //HEADING_DIFFERENCE
+            1, //FRIENDLY_DIRECTION
+            1, //ENEMY_DIRECTION
+            1  //BEARING_DIFFERENCE
+    };
+
+    public static final double[] AVOIDING_WEIGHTS = {
+            1, //ENEMY_VELOCITY
+            1, //DISTANCE_BETWEEN_ROBOTS
+            1, //FRIENDLY_VELOCITY
+            1, //BEARING_FROM_TURRET
+            1, //HEADING_DIFFERENCE
+            1, //FRIENDLY_DIRECTION
+            1, //ENEMY_DIRECTION
+            1  //BEARING_DIFFERENCE
+    };
 }

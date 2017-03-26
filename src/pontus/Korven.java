@@ -1,5 +1,6 @@
 package pontus;
 
+import Util.Vector2D;
 import robocode.*;
 
 import java.awt.*;
