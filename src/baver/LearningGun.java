@@ -113,12 +113,10 @@ public class LearningGun {
             ).paintVector((Graphics2D) g, robot.getX(), robot.getY(), new Color(253, 255, 52));
 
             g.drawRect((int)(robot.getX() + currentBestMatched.getDistanceBetweenRobots() *
-                            Math.sin(Math.toRadians(robot.getGunHeading()))),
+                            Math.sin(Math.toRadians(robot.getGunHeading() + currentBestMatched.getTurretBearing()))),
                         (int)(robot.getY() + currentBestMatched.getDistanceBetweenRobots() *
-                            Math.cos(Math.toRadians(robot.getGunHeading()))),
+                            Math.cos(Math.toRadians(robot.getGunHeading() + currentBestMatched.getTurretBearing()))),
                     20, 20);
-
-            System.out.println("Gun bearing: " + currentBestMatched.getTurretBearing());
         }
     }
 

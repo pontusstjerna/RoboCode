@@ -97,7 +97,7 @@ public class Shot implements Serializable{
         double EB_bearing = eb.getHeading();
 
         enemyDeltaAngle = Util.get180(ER_bearing - EB_bearing);
-        System.out.println("Edv: " + enemyDeltaAngle);
+       // System.out.println("Edv: " + enemyDeltaAngle);
         distanceToImpact = Vector2D.getLength(eb);
     }
 
@@ -156,24 +156,24 @@ public class Shot implements Serializable{
     public boolean isFiredByMachineLearning(){ return firedByMachineLearning;}
 
     public double getDistance(Shot shot, WeightSet weights){
-        double dVelocity = (velocity - shot.getVelocity())/ (Rules.MAX_VELOCITY*2);
-        double dRobVel = (robotVelocity - shot.getFriendlyVelocity())/(Rules.MAX_VELOCITY*2);
+        double dVelocity = (velocity - shot.velocity)/ (Rules.MAX_VELOCITY*2);
+        double dRobVel = (robotVelocity - shot.robotVelocity)/(Rules.MAX_VELOCITY*2);
         double dDistance = 0;
         double dTurretBearing = 0;
-        double dDeltaHeading = (deltaHeading - shot.getDeltaHeading())/Reference.MAX_DELTA_HEADING;
-        double dDir = (robDir - shot.getRobDir())/(double)2;
-        double dEnemyDir = (enemyDir - shot.getEnemyDir())/(double)2;
+        double dDeltaHeading = (deltaHeading - shot.deltaHeading)/Reference.MAX_DELTA_HEADING;
+        double dDir = (robDir - shot.robDir)/(double)2;
+        double dEnemyDir = (enemyDir - shot.enemyDir)/(double)2;
         double dBearing = 0;
 
         //Here everything should be normalized
 
 
-        if(distance != -1 && shot.getDistanceBetweenRobots() != -1)
-            dDistance = (distance - shot.getDistanceBetweenRobots())/maxDistance;
-        if(turretBearing != -1 && shot.getTurretBearing() != -1)
-            dTurretBearing = (turretBearing - shot.getTurretBearing())/Reference.MAX_DELTA_HEADING;
-        if(relativeBearing != -1 && shot.getRelativeBearing() != -1)
-            dBearing = (relativeBearing - shot.getRelativeBearing())/Reference.MAX_DELTA_HEADING*2;
+        if(distance != -1 && shot.distance != -1)
+            dDistance = (distance - shot.distance)/maxDistance;
+        if(turretBearing != -1 && shot.turretBearing != -1)
+            dTurretBearing = (turretBearing - shot.turretBearing)/Reference.MAX_DELTA_HEADING;
+        if(relativeBearing != -1 && shot.relativeBearing != -1)
+            dBearing = (relativeBearing - shot.relativeBearing)/Reference.MAX_DELTA_HEADING*2;
 
 
         //Add weights
