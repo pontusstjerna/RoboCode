@@ -197,7 +197,7 @@ public class Shot implements Serializable{
         return getDistance(shot, new WeightSet());
     }
 
-    states getState(){
+    public states getState(){
         return state;
     }
 
