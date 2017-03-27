@@ -13,6 +13,7 @@ public final class Reference {
     public static final int REQUIRED_HIT_LIMIT = 2;
     public static double BATTLEFIELD_WIDTH = 0;
     public static double BATTLEFIELD_HEIGHT = 0;
+    public static int STICK_LENGTH = 200;
 
     public static final int MAX_DELTA_HEADING = 180;
 
