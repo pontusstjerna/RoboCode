@@ -28,7 +28,6 @@ public class BaverMain extends AdvancedRobot {
     private int lockTicks = Reference.LOCK_TIMEOUT;
     private int dir = 1;
 
-    private Point2D.Double enemyPos = new Point2D.Double();
     private Random rand;
 
     @Override
@@ -83,7 +82,6 @@ public class BaverMain extends AdvancedRobot {
     @Override
     public void onBulletHit(BulletHitEvent e) {
         learningGun.registerBulletHit(e.getBullet());
-        lastBulletHitTime = e.getTime();
     }
 
     @Override
@@ -93,7 +91,7 @@ public class BaverMain extends AdvancedRobot {
 
     @Override
     public void onHitByBullet(HitByBulletEvent e) {
-
+        avoidanceSystem.registerBulletHit(e);
     }
 
     @Override
@@ -167,8 +165,8 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private void updateEnemyPos(ScannedRobotEvent e) {
-        enemyPos.x = getX() + e.getDistance() * Math.sin(getRadarHeadingRadians());
-        enemyPos.y = getY() + e.getDistance() * Math.cos(getRadarHeadingRadians());
+        avoidanceSystem.updateEnemyPos(getX() + e.getDistance() * Math.sin(getRadarHeadingRadians()),
+                getY() + e.getDistance() * Math.cos(getRadarHeadingRadians()));
     }
 
     private double getDistanceToWall() {

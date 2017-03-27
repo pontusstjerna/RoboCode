@@ -1,6 +1,7 @@
 package baver;
 
 import Util.Vector2D;
+import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
 import robocode.AdvancedRobot;
 import robocode.HitByBulletEvent;
 import robocode.RobocodeFileOutputStream;
@@ -45,7 +46,13 @@ public class AvoidanceSystem {
         enemyShots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.update());
     }
 
+    public void updateEnemyPos(double x, double y){
+        enemyPos.x = x;
+        enemyPos.y = y;
+    }
+
     public void registerBulletHit(HitByBulletEvent e){
+        lastBulletHitTime = e.getTime();
         Optional<Shot> registeredShot = enemyShots.stream().filter(s -> e.getTime() == s.getTime()).findFirst();
         if (registeredShot.isPresent())
             registeredShot.get().setRobotHit(e.getBullet(), (Point2D.Double) enemyPos.clone());
@@ -73,6 +80,8 @@ public class AvoidanceSystem {
 
         Shot mostRecent = enemyShots.get(enemyShots.size() - 1);
         List<Shot> matched = getBestMatchedShots(mostRecent, 10);
+
+        //System.out.println("Matched size " + matched.size());
         for (int i = 0; i < matched.size(); i++) {
             Vector2D er = new Vector2D(mostRecent.getRobotPointAtFire().getX() - mostRecent.getEnemyPointAtFire().getX(), mostRecent.getRobotPointAtFire().getY() - mostRecent.getEnemyPointAtFire().getY());
             double ER_bearingRad = er.getHeadingRadians();
@@ -93,7 +102,7 @@ public class AvoidanceSystem {
         boolean fired = enemyDeltaEnergy < 0 && e.getTime() != lastBulletHitTime;
 
         if (fired) {
-            // System.out.println("Shot registered with power " + enemyDeltaEnergy + " . Shots: " + enemyShots.size());
+            //System.out.println("Shot registered with power " + enemyDeltaEnergy + " . Shots: " + enemyShots.size());
             Shot shot = new Shot(e, (Point2D.Double) enemyPos.clone(), enemyDeltaEnergy, robot);
             enemyShots.add(shot);
         }
@@ -150,10 +159,9 @@ public class AvoidanceSystem {
     }
 
     private List<Shot> getBestMatchedShots(Shot shot, int maxSize) {
-        Stream<Shot> bestMatched = enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT);
-
-        bestMatched = bestMatched.sorted((x, y) -> x.getDistance(shot, avoidWeights) < y.getDistance(shot, avoidWeights) ? -1 : 1);
-        return bestMatched.limit(maxSize).collect(Collectors.toList());
+        return enemyShots.stream().filter(s -> s.getState() == Shot.states.HIT)
+                .sorted((x, y) -> x.getDistance(shot, avoidWeights) < y.getDistance(shot, avoidWeights) ? -1 : 1)
+                .limit(maxSize).collect(Collectors.toList());
     }
 
     //NOT USED

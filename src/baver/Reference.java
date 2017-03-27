@@ -27,6 +27,7 @@ public final class Reference {
             3  //BEARING_DIFFERENCE
     };
 
+
     public static final double[] AVOIDING_WEIGHTS = {
             0.2, //ENEMY_VELOCITY
             1, //DISTANCE_BETWEEN_ROBOTS
