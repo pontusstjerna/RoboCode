@@ -21,8 +21,7 @@ public class BaverMain extends AdvancedRobot {
 
     private int lockTicks = Reference.LOCK_TIMEOUT;
     private int dir = 1;
-    private Point2D.Double leftStick;
-    private Point2D.Double rightStick;
+    private Point2D.Double stick;
 
     private Random rand;
 
@@ -42,8 +41,7 @@ public class BaverMain extends AdvancedRobot {
         avoidanceSystem = new AvoidanceSystem(this);
 
         rand = new Random();
-        leftStick = new Point2D.Double(getX(), getY());
-        rightStick = new Point2D.Double(getX(), getY());
+        stick = new Point2D.Double(getX(), getY());
 
         Reference.BATTLEFIELD_WIDTH = getBattleFieldWidth();
         Reference.BATTLEFIELD_HEIGHT = getBattleFieldHeight();
@@ -57,6 +55,8 @@ public class BaverMain extends AdvancedRobot {
 
             avoidanceSystem.updateShots();
             updateStickPos();
+
+            driveAround();
 
             execute();
         }
@@ -126,8 +126,7 @@ public class BaverMain extends AdvancedRobot {
         g.drawString("LearningGun hit rate: " + (int) (learningGun.getLearningGunHitRate() * 100) + "%", 10, 45);
 
         //Sticks
-        g.drawLine((int) getX(), (int) getY(), (int) leftStick.getX(), (int) leftStick.getY());
-        g.drawLine((int) getX(), (int) getY(), (int) rightStick.getX(), (int) rightStick.getY());
+        g.drawLine((int) getX(), (int) getY(), (int) stick.getX(), (int) stick.getY());
 
         avoidanceSystem.paintAvoidanceSystem(g);
 
@@ -152,10 +151,10 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private void keepDistance(ScannedRobotEvent e) {
-        double distWall = getDistanceToWall();
-        double angToMid = getAngleToMiddle();
-        double percentToWall = getDistanceToMiddle() / distWall;
-        double additionalTurnToMiddle = angToMid * percentToWall * 0;
+        double distWall = getDistanceToWall(getX(), getY());
+        double angToMid = getAngleToMiddle(stick.getX(), stick.getY());
+        double percentToWall = getDistanceToMiddle(getX(), getY()) / distWall;
+        double additionalTurnToMiddle = angToMid * percentToWall * 0.5;
 
         if (e.getEnergy() == 0) { //If component disabled
             clearAllEvents();
@@ -163,20 +162,27 @@ public class BaverMain extends AdvancedRobot {
             if (e.getBearing() < 3) {
                 setAhead(500 * dir);
             }
-        } else if (!avoidWall()) { //If in the perfect distance interval
+        } else {
             setTurnRight((e.getBearing() - 90 * dir + additionalTurnToMiddle));
         }
         setAhead((rand.nextInt(200) + 70) * dir);
     }
 
     private void updateStickPos() {
-        leftStick.setLocation(
-                getX() + Reference.STICK_LENGTH * dir * Math.sin(getHeadingRadians() + Math.toRadians(-Reference.STICK_TURN)),
-                getY() + Reference.STICK_LENGTH * dir * Math.cos(getHeadingRadians() + Math.toRadians(-Reference.STICK_TURN)));
+        stick.setLocation(
+                getX() + Reference.STICK_LENGTH * dir * Math.sin(getHeadingRadians()),
+                getY() + Reference.STICK_LENGTH * dir * Math.cos(getHeadingRadians()));
+    }
 
-        rightStick.setLocation(
-                getX() + Reference.STICK_LENGTH * dir * Math.sin(getHeadingRadians() + Math.toRadians(Reference.STICK_TURN)),
-                getY() + Reference.STICK_LENGTH * dir * Math.cos(getHeadingRadians() + Math.toRadians(Reference.STICK_TURN)));
+    private void driveAround(){
+        double distWall = getDistanceToWall(getX(), getY());
+        double angToMid = getAngleToMiddle(stick.getX(), stick.getY());
+        double percentToWall = getDistanceToMiddle(getX(), getY()) / distWall;
+        double additionalTurnToMiddle = angToMid * percentToWall;
+
+        setTurnRight(additionalTurnToMiddle);
+
+        setAhead((rand.nextInt(200) + 70) * dir);
     }
 
     private void updateEnemyPos(ScannedRobotEvent e) {
@@ -209,45 +215,17 @@ public class BaverMain extends AdvancedRobot {
         return Point.distance(getBattleFieldWidth() / 2, getBattleFieldHeight() / 2, x, y);
     }
 
-    private boolean turnedLeft = false;
-    private boolean turnedRight = false;
-
-    private boolean avoidWall() {
-        double leftStickDistance = getDistanceToWall(leftStick.getX(), leftStick.getY());
-        double rightStickDistance = getDistanceToWall(rightStick.getX(), rightStick.getY());
-
-        //If turnedLeft stick is outside battlefield
-        turnedRight = leftStick.getX() < 0 || leftStick.getX() > getBattleFieldWidth() ||
-                leftStick.getY() < 0 || leftStick.getY() > getBattleFieldHeight() ||
-                (turnedRight && leftStickDistance < Reference.STICK_ADDITIONAL_WALL_DISTANCE);
-
-
-        //If turnedRight stick is outside battlefield
-        turnedLeft = rightStick.getX() < 0 || rightStick.getX() > getBattleFieldWidth() ||
-                rightStick.getY() < 0 || rightStick.getY() > getBattleFieldHeight() ||
-                (turnedLeft && rightStickDistance < Reference.STICK_ADDITIONAL_WALL_DISTANCE);;
-
-        if (turnedLeft && turnedRight) {
-            if (leftStickDistance > rightStickDistance) {
-                setTurnRight(90);
-            } else
-                setTurnLeft(90);
-        } else if (turnedLeft) {
-            setTurnLeft(90);
-        } else if (turnedRight) {
-            setTurnRight(90);
-        }
-
-        return turnedLeft || turnedRight;
+    private double getAngleToMiddle() {
+       return getAngleToMiddle(getX(), getY());
     }
 
-    private double getAngleToMiddle() {
-        double dx = (getBattleFieldWidth() / 2) - getX();
-        double dy = (getBattleFieldHeight() / 2) - getY();
+    private double getAngleToMiddle(double x, double y){
+        double dx = (getBattleFieldWidth() / 2) - x;
+        double dy = (getBattleFieldHeight() / 2) - y;
 
         Vector2D toMiddle = new Vector2D(dx, dy);
 
-        double angle = Util.get180(toMiddle.getHeading() * dir - Util.get180(getHeading() * dir));
+        double angle = Util.get180(toMiddle.getHeading()*dir - Util.get180(getHeading())*dir);
         return angle;
     }
 
