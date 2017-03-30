@@ -6,13 +6,7 @@ import robocode.*;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.Random;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 
 /**
@@ -27,7 +21,8 @@ public class BaverMain extends AdvancedRobot {
 
     private int lockTicks = Reference.LOCK_TIMEOUT;
     private int dir = 1;
-    private Point2D.Double stick;
+    private Point2D.Double leftStick;
+    private Point2D.Double rightStick;
 
     private Random rand;
 
@@ -47,7 +42,8 @@ public class BaverMain extends AdvancedRobot {
         avoidanceSystem = new AvoidanceSystem(this);
 
         rand = new Random();
-        stick = new Point2D.Double(getX(), getY());
+        leftStick = new Point2D.Double(getX(), getY());
+        rightStick = new Point2D.Double(getX(), getY());
 
         Reference.BATTLEFIELD_WIDTH = getBattleFieldWidth();
         Reference.BATTLEFIELD_HEIGHT = getBattleFieldHeight();
@@ -125,11 +121,13 @@ public class BaverMain extends AdvancedRobot {
     public void onPaint(Graphics2D g) {
         g.setColor(Color.white);
         g.drawString("Hit shots: " + learningGun.getHitShotsCount(), 10, 90);
-        g.drawString("Overall hit rate: " + (int)(learningGun.getHitRate() * 100) + "%", 10, 75);
-        g.drawString("AngleGun hit rate: " + (int)(learningGun.getAngleGunHitRate() * 100) + "%", 10, 60);
-        g.drawString("LearningGun hit rate: " + (int)(learningGun.getLearningGunHitRate() * 100) + "%", 10, 45);
+        g.drawString("Overall hit rate: " + (int) (learningGun.getHitRate() * 100) + "%", 10, 75);
+        g.drawString("AngleGun hit rate: " + (int) (learningGun.getAngleGunHitRate() * 100) + "%", 10, 60);
+        g.drawString("LearningGun hit rate: " + (int) (learningGun.getLearningGunHitRate() * 100) + "%", 10, 45);
 
-        g.drawLine((int)getX(), (int)getY(), (int)stick.getX(), (int)stick.getY());
+        //Sticks
+        g.drawLine((int) getX(), (int) getY(), (int) leftStick.getX(), (int) leftStick.getY());
+        g.drawLine((int) getX(), (int) getY(), (int) rightStick.getX(), (int) rightStick.getY());
 
         avoidanceSystem.paintAvoidanceSystem(g);
 
@@ -157,26 +155,28 @@ public class BaverMain extends AdvancedRobot {
         double distWall = getDistanceToWall();
         double angToMid = getAngleToMiddle();
         double percentToWall = getDistanceToMiddle() / distWall;
-        double additionalTurnToMiddle = angToMid * percentToWall*0;
+        double additionalTurnToMiddle = angToMid * percentToWall * 0;
 
         if (e.getEnergy() == 0) { //If component disabled
-            setStop();
+            clearAllEvents();
             setTurnRight(e.getBearing() * dir);
-            if(e.getBearing() < 3){
-                setAhead(500*dir);
+            if (e.getBearing() < 3) {
+                setAhead(500 * dir);
             }
-        } else if() {
-
-        }else { //If in the perfect distance interval
-            setTurnRight((e.getBearing() - 90*dir + additionalTurnToMiddle));
+        } else if (!avoidWall()) { //If in the perfect distance interval
+            setTurnRight((e.getBearing() - 90 * dir + additionalTurnToMiddle));
         }
         setAhead((rand.nextInt(200) + 70) * dir);
     }
 
-    private void updateStickPos(){
-        stick.setLocation(
-                getX() + Reference.STICK_LENGTH*dir*Math.sin(getHeadingRadians()),
-                getY() + Reference.STICK_LENGTH*dir*Math.cos(getHeadingRadians()));
+    private void updateStickPos() {
+        leftStick.setLocation(
+                getX() + Reference.STICK_LENGTH * dir * Math.sin(getHeadingRadians() + Math.toRadians(-Reference.STICK_TURN)),
+                getY() + Reference.STICK_LENGTH * dir * Math.cos(getHeadingRadians() + Math.toRadians(-Reference.STICK_TURN)));
+
+        rightStick.setLocation(
+                getX() + Reference.STICK_LENGTH * dir * Math.sin(getHeadingRadians() + Math.toRadians(Reference.STICK_TURN)),
+                getY() + Reference.STICK_LENGTH * dir * Math.cos(getHeadingRadians() + Math.toRadians(Reference.STICK_TURN)));
     }
 
     private void updateEnemyPos(ScannedRobotEvent e) {
@@ -185,7 +185,11 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private double getDistanceToWall() {
-        double[] distances = {getX(), getY(), getBattleFieldWidth() - getX(), getBattleFieldHeight() - getY()};
+        return getDistanceToWall(getX(), getY());
+    }
+
+    private double getDistanceToWall(double x, double y) {
+        double[] distances = {x, y, getBattleFieldWidth() - x, getBattleFieldHeight() - y};
         double distance = distances[0];
 
         for (int i = 0; i < distances.length; i++) {
@@ -198,17 +202,43 @@ public class BaverMain extends AdvancedRobot {
     }
 
     private double getDistanceToMiddle() {
-        return Point.distance(getBattleFieldWidth() / 2, getBattleFieldHeight() / 2, getX(), getY());
+        return getDistanceToMiddle(getX(), getY());
     }
 
-    private boolean avoidWall(){
-        boolean avoiding = false;
+    private double getDistanceToMiddle(double x, double y) {
+        return Point.distance(getBattleFieldWidth() / 2, getBattleFieldHeight() / 2, x, y);
+    }
 
-        if(stick.getX() < 0){
-            
+    private boolean turnedLeft = false;
+    private boolean turnedRight = false;
+
+    private boolean avoidWall() {
+        double leftStickDistance = getDistanceToWall(leftStick.getX(), leftStick.getY());
+        double rightStickDistance = getDistanceToWall(rightStick.getX(), rightStick.getY());
+
+        //If turnedLeft stick is outside battlefield
+        turnedRight = leftStick.getX() < 0 || leftStick.getX() > getBattleFieldWidth() ||
+                leftStick.getY() < 0 || leftStick.getY() > getBattleFieldHeight() ||
+                (turnedRight && leftStickDistance < Reference.STICK_ADDITIONAL_WALL_DISTANCE);
+
+
+        //If turnedRight stick is outside battlefield
+        turnedLeft = rightStick.getX() < 0 || rightStick.getX() > getBattleFieldWidth() ||
+                rightStick.getY() < 0 || rightStick.getY() > getBattleFieldHeight() ||
+                (turnedLeft && rightStickDistance < Reference.STICK_ADDITIONAL_WALL_DISTANCE);;
+
+        if (turnedLeft && turnedRight) {
+            if (leftStickDistance > rightStickDistance) {
+                setTurnRight(90);
+            } else
+                setTurnLeft(90);
+        } else if (turnedLeft) {
+            setTurnLeft(90);
+        } else if (turnedRight) {
+            setTurnRight(90);
         }
 
-        return avoiding;
+        return turnedLeft || turnedRight;
     }
 
     private double getAngleToMiddle() {
@@ -217,7 +247,7 @@ public class BaverMain extends AdvancedRobot {
 
         Vector2D toMiddle = new Vector2D(dx, dy);
 
-        double angle = Util.get180(toMiddle.getHeading()*dir - Util.get180(getHeading()*dir));
+        double angle = Util.get180(toMiddle.getHeading() * dir - Util.get180(getHeading() * dir));
         return angle;
     }
 
