@@ -49,14 +49,13 @@ public class BaverMain extends AdvancedRobot {
         while (true) {
             if (lockTicks >= Reference.LOCK_TIMEOUT) {
                 setTurnRadarRight(360);
+             //   driveAround();
             } else {
                 lockTicks++;
             }
 
             avoidanceSystem.updateShots();
             updateStickPos();
-
-            driveAround();
 
             execute();
         }
@@ -99,7 +98,7 @@ public class BaverMain extends AdvancedRobot {
     @Override
     public void onHitWall(HitWallEvent e) {
         setStop();
-        double angToMid = getAngleToMiddle();
+        double angToMid = getBearingToMiddle();
         setTurnRight(angToMid);
         setAhead(Reference.WALL_LIMIT);
         setResume();
@@ -152,18 +151,20 @@ public class BaverMain extends AdvancedRobot {
 
     private void keepDistance(ScannedRobotEvent e) {
         double distWall = getDistanceToWall(getX(), getY());
-        double angToMid = getAngleToMiddle(stick.getX(), stick.getY());
-        double percentToWall = getDistanceToMiddle(getX(), getY()) / distWall;
+        double angToMid = getBearingToMiddle();
+        double percentToWall = getDistanceToMiddle() / distWall;
         double additionalTurnToMiddle = angToMid * percentToWall * 0.5;
+
+        //System.out.println("Ang to mid: " + angToMid);
 
         if (e.getEnergy() == 0) { //If component disabled
             clearAllEvents();
-            setTurnRight(e.getBearing() * dir);
+            setTurnRight(e.getBearing()*dir);
             if (e.getBearing() < 3) {
                 setAhead(500 * dir);
             }
         } else {
-            setTurnRight((e.getBearing() - 90 * dir + additionalTurnToMiddle));
+            setTurnRight((e.getBearing() - 90 + additionalTurnToMiddle));
         }
         setAhead((rand.nextInt(200) + 70) * dir);
     }
@@ -176,7 +177,7 @@ public class BaverMain extends AdvancedRobot {
 
     private void driveAround(){
         double distWall = getDistanceToWall(getX(), getY());
-        double angToMid = getAngleToMiddle(stick.getX(), stick.getY());
+        double angToMid = getBearingToMiddle(stick.getX(), stick.getY());
         double percentToWall = getDistanceToMiddle(getX(), getY()) / distWall;
         double additionalTurnToMiddle = angToMid * percentToWall;
 
@@ -215,17 +216,17 @@ public class BaverMain extends AdvancedRobot {
         return Point.distance(getBattleFieldWidth() / 2, getBattleFieldHeight() / 2, x, y);
     }
 
-    private double getAngleToMiddle() {
-       return getAngleToMiddle(getX(), getY());
+    private double getBearingToMiddle() {
+       return getBearingToMiddle(getX(), getY());
     }
 
-    private double getAngleToMiddle(double x, double y){
+    private double getBearingToMiddle(double x, double y){
         double dx = (getBattleFieldWidth() / 2) - x;
         double dy = (getBattleFieldHeight() / 2) - y;
 
         Vector2D toMiddle = new Vector2D(dx, dy);
 
-        double angle = Util.get180(toMiddle.getHeading()*dir - Util.get180(getHeading())*dir);
+        double angle = Util.get180(toMiddle.getHeading() - Util.get180(getDirHeading()));
         return angle;
     }
 
@@ -233,4 +234,11 @@ public class BaverMain extends AdvancedRobot {
         lockTicks = 0;
     }
 
+    private double getDirHeading(){
+        if(dir == 1){
+            return super.getHeading();
+        }else{
+            return Util.get180(super.getHeading() + 180);
+        }
+    }
 }
