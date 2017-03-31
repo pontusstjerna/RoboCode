@@ -1,15 +1,12 @@
 package baver;
 
 import Util.Vector2D;
-import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
 import robocode.AdvancedRobot;
 import robocode.HitByBulletEvent;
-import robocode.RobocodeFileOutputStream;
 import robocode.ScannedRobotEvent;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import Util.Util;
+import Util.Line;
 
 /**
  * Created by pontu on 2017-03-27.
@@ -27,6 +25,7 @@ public class AvoidanceSystem {
     private double oldEnemyEnergy;
     private long lastBulletHitTime = 0;
     private Point2D.Double enemyPos = new Point2D.Double();
+    private Line avoidanceLine;
 
     private List<Shot> enemyShots;
     private WeightSet avoidWeights;
@@ -35,6 +34,7 @@ public class AvoidanceSystem {
         this.robot = robot;
         enemyShots = Util.loadPreviousShots(robot.getDataFile("enemyShots"), robot.getRoundNum());
         avoidWeights = new WeightSet(Reference.AVOIDING_WEIGHTS);
+        avoidanceLine = new Line(1, 0);
     }
 
     public int getNewDirection(ScannedRobotEvent e, int currentDirection) {
@@ -42,8 +42,10 @@ public class AvoidanceSystem {
         return currentDirection;
     }
 
-    public void updateShots(){
+    public void update(){
         enemyShots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.update());
+        updateLine();
+
     }
 
     public void updateEnemyPos(double x, double y){
@@ -95,6 +97,9 @@ public class AvoidanceSystem {
             g.setColor(new Color(255 - i * 20, i * 20, 0));
             g.fillRoundRect((int) hitPoint.getX(), (int) hitPoint.getY(), 10, 10, 10, 10);
         }
+
+        //Line
+        avoidanceLine.plot(g, robot.getX(), robot.getY(), 200, Color.BLACK);
     }
 
     private boolean detectShot(ScannedRobotEvent e) {
@@ -163,6 +168,18 @@ public class AvoidanceSystem {
                 .sorted((x, y) -> x.getDistance(shot, avoidWeights) < y.getDistance(shot, avoidWeights) ? -1 : 1)
                 .limit(maxSize).collect(Collectors.toList());
     }
+
+    private void updateLine(){
+        avoidanceLine.setAFromHeading(robot.getHeadingRadians());
+    }
+
+
+
+
+
+
+
+
 
     //NOT USED
     private Vector2D getExpectedImpact(Shot justFired, Shot oldShot) {

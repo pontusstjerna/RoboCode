@@ -54,8 +54,8 @@ public class BaverMain extends AdvancedRobot {
                 lockTicks++;
             }
 
-            avoidanceSystem.updateShots();
-            updateStickPos();
+            avoidanceSystem.update();
+//            updateStickPos();
 
             execute();
         }
@@ -67,7 +67,7 @@ public class BaverMain extends AdvancedRobot {
 
         //Avoidance
         dir = avoidanceSystem.getNewDirection(e, dir);
-        updateStickPos();
+   //     updateStickPos();
 
         //Moving
         updateEnemyPos(e);
@@ -76,7 +76,7 @@ public class BaverMain extends AdvancedRobot {
         //Shooting
         attack(e);
 
-        avoidanceSystem.updateShots();
+        avoidanceSystem.update();
         scan();
     }
 
@@ -125,7 +125,7 @@ public class BaverMain extends AdvancedRobot {
         g.drawString("LearningGun hit rate: " + (int) (learningGun.getLearningGunHitRate() * 100) + "%", 10, 45);
 
         //Sticks
-        g.drawLine((int) getX(), (int) getY(), (int) stick.getX(), (int) stick.getY());
+      //  g.drawLine((int) getX(), (int) getY(), (int) stick.getX(), (int) stick.getY());
 
         avoidanceSystem.paintAvoidanceSystem(g);
 
