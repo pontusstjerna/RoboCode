@@ -11,10 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import Util.Util;
-import Util.Line;
 
 /**
  * Created by pontu on 2017-03-27.
@@ -25,16 +23,19 @@ public class AvoidanceSystem {
     private double oldEnemyEnergy;
     private long lastBulletHitTime = 0;
     private Point2D.Double enemyPos = new Point2D.Double();
-    private Line avoidanceLine;
 
     private List<Shot> enemyShots;
     private WeightSet avoidWeights;
+
+    private Vector2D avoidanceVector;
+    private Point2D.Double avoidanceVectorOrigin;
 
     public AvoidanceSystem(AdvancedRobot robot){
         this.robot = robot;
         enemyShots = Util.loadPreviousShots(robot.getDataFile("enemyShots"), robot.getRoundNum());
         avoidWeights = new WeightSet(Reference.AVOIDING_WEIGHTS);
-        avoidanceLine = new Line(1, 0);
+        avoidanceVector = new Vector2D(robot.getX(), robot.getY());
+        avoidanceVectorOrigin = new Point2D.Double(robot.getX(), robot.getY());
     }
 
     public int getNewDirection(ScannedRobotEvent e, int currentDirection) {
@@ -44,7 +45,7 @@ public class AvoidanceSystem {
 
     public void update(){
         enemyShots.stream().filter(s -> s.getState() == Shot.states.IN_AIR).forEach(s -> s.update());
-        updateLine();
+        updateAvoidanceVectors();
 
     }
 
@@ -80,26 +81,24 @@ public class AvoidanceSystem {
         if (enemyShots.size() == 0)
             return;
 
-        Shot mostRecent = enemyShots.get(enemyShots.size() - 1);
-        List<Shot> matched = getBestMatchedShots(mostRecent, 10);
 
-        //System.out.println("Matched size " + matched.size());
-        for (int i = 0; i < matched.size(); i++) {
-            Vector2D er = new Vector2D(mostRecent.getRobotPointAtFire().getX() - mostRecent.getEnemyPointAtFire().getX(), mostRecent.getRobotPointAtFire().getY() - mostRecent.getEnemyPointAtFire().getY());
-            double ER_bearingRad = er.getHeadingRadians();
 
-            double angle = ER_bearingRad - Math.toRadians(matched.get(i).getEnemyDeltaAngle());
-            double currDistance = mostRecent.getTimeAlive() * (20 - 3 * mostRecent.getPower());
-            Point2D.Double hitPoint = new Point2D.Double(
-                    mostRecent.getEnemyPointAtFire().getX() + currDistance * Math.sin(angle),
-                    mostRecent.getEnemyPointAtFire().getY() + currDistance * Math.cos(angle));
+        Vector2D[] predictedRoutes = getShotVectors(10);
+        Shot ms = enemyShots.get(enemyShots.size() - 1);
+        for(int i = 0; i < predictedRoutes.length; i++) {
+            Color c = new Color(255 - i * 25, i * 25, 0);
+            g.setColor(c);
 
-            g.setColor(new Color(255 - i * 20, i * 20, 0));
-            g.fillRoundRect((int) hitPoint.getX(), (int) hitPoint.getY(), 10, 10, 10, 10);
+            Point2D.Double is = getIntersection(
+                    avoidanceVector, predictedRoutes[i], avoidanceVectorOrigin, ms.getEnemyPointAtFire());
+
+            if(is != null)
+                g.drawRect((int)is.getX(), (int)is.getY(), 15, 15);
+
+            //predictedRoutes[i].paintVector(g, ms.getEnemyPointAtFire().getX(), ms.getEnemyPointAtFire().getY(), c);
         }
 
-        //Line
-        avoidanceLine.plot(g, robot.getX(), robot.getY(), 200, Color.BLACK);
+        avoidanceVector.paintVector(g, avoidanceVectorOrigin.getX(), avoidanceVectorOrigin.getY(), Color.black);
     }
 
     private boolean detectShot(ScannedRobotEvent e) {
@@ -126,32 +125,54 @@ public class AvoidanceSystem {
         double nFwd = 0;
         double nRev = 0;
 
+        Vector2D[] predictedRoutes = getShotVectors(100);
         List<Shot> matched = getBestMatchedShots(mostRecent, 10);
         for (int i = 0; i < matched.size(); i++) {
-            Vector2D er = new Vector2D(mostRecent.getRobotPointAtFire().getX() - mostRecent.getEnemyPointAtFire().getX(), mostRecent.getRobotPointAtFire().getY() - mostRecent.getEnemyPointAtFire().getY());
-            double ER_bearingRad = er.getHeadingRadians();
 
-            double angle = ER_bearingRad - Math.toRadians(matched.get(i).getEnemyDeltaAngle());
-            double currDistance = mostRecent.getTimeAlive() * (20 - 3 * mostRecent.getPower());
-            Point2D.Double hitPoint = new Point2D.Double(
-                    mostRecent.getEnemyPointAtFire().getX() + currDistance * Math.sin(angle),
-                    mostRecent.getEnemyPointAtFire().getY() + currDistance * Math.cos(angle));
+            Point2D.Double is = getIntersection(
+                    avoidanceVector, predictedRoutes[i], avoidanceVectorOrigin, mostRecent.getEnemyPointAtFire());
 
-            if (Util.isInFront(robot.getX(), robot.getY(), hitPoint.getX(), hitPoint.getY(), robot.getHeading())) {
-                nFwd += (1 / ((double) i + 1));
-                //   System.out.println("In front!");
-            } else {
-                nRev += (1 / ((double) i + 1));
-                // System.out.println("In back!");
+            if(is != null){
+                if (Util.isInFront(robot.getX(), robot.getY(), is.getX(), is.getY(), robot.getHeading())) {
+                    nFwd += (1 / ((double) i + 1));
+                    //   System.out.println("In front!");
+                } else {
+                    nRev += (1 / ((double) i + 1));
+                    // System.out.println("In back!");
+                }
+
+                //(1/((double)i + 1));
             }
-
-            //(1/((double)i + 1));
         }
 
         if (nFwd > nRev) {
             return -1;
         } else
             return 1;
+    }
+
+    private Vector2D[] getShotVectors(int limit){
+        Shot mostRecent = enemyShots.get(enemyShots.size() - 1);
+        List<Shot> matched = getBestMatchedShots(mostRecent, limit);
+        Vector2D[] vectors = new Vector2D[matched.size()];
+
+        for (int i = 0; i < matched.size(); i++) {
+            Vector2D er = new Vector2D(mostRecent.getRobotPointAtFire().getX() - mostRecent.getEnemyPointAtFire().getX(), mostRecent.getRobotPointAtFire().getY() - mostRecent.getEnemyPointAtFire().getY());
+            double ER_bearingRad = er.getHeadingRadians();
+
+            double angle = ER_bearingRad - Math.toRadians(matched.get(i).getEnemyDeltaAngle());
+            double length = Point.distance(robot.getX(), robot.getY(), mostRecent.getEnemyPointAtFire().getX(), mostRecent.getEnemyPointAtFire().getY());
+
+            vectors[i] = new Vector2D(
+                    length*1.5 * Math.sin(angle),
+                    length*1.5 * Math.cos(angle));
+        }
+
+        return vectors;
+    }
+
+    private double getCurrentDistance(Shot shot){
+        return shot.getTimeAlive() * (20 - 3 * shot.getPower());
     }
 
     private Shot getBestMatchedShot(Shot shot) {
@@ -169,12 +190,42 @@ public class AvoidanceSystem {
                 .limit(maxSize).collect(Collectors.toList());
     }
 
-    private void updateLine(){
-        avoidanceLine.setAFromHeading(robot.getHeadingRadians());
+
+    private void updateAvoidanceVectors(){
+        avoidanceVector.setX(Reference.STICK_LENGTH*2*Math.sin(robot.getHeadingRadians()));
+        avoidanceVector.setY(Reference.STICK_LENGTH*2*Math.cos(robot.getHeadingRadians()));
+        avoidanceVectorOrigin.setLocation(
+                        robot.getX() - Reference.STICK_LENGTH*Math.sin(robot.getHeadingRadians()),
+                        robot.getY() - Reference.STICK_LENGTH*Math.cos(robot.getHeadingRadians())
+        );
     }
 
+    private Point2D.Double getIntersection(Vector2D a, Vector2D b, Point2D.Double aStart, Point2D.Double bStart) {
+        //Algorithm from http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 
+        double p0_x = aStart.getX();
+        double p0_y = aStart.getY();
+        double p1_x = aStart.getX() + a.getX();
+        double p1_y = aStart.getY() + a.getY();
+        double p2_x = bStart.getX();
+        double p2_y = bStart.getY();
+        double p3_x = bStart.getX() + b.getX();
+        double p3_y = bStart.getY() + b.getY();
 
+        double s1_x = p1_x - p0_x;
+        double s2_x = p3_x - p2_x;
+        double s1_y = p1_y - p0_y;
+        double s2_y = p3_y - p2_y;
+
+        double s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+        double t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+        if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+            return new Point2D.Double(p0_x + (t * s1_x), p0_y + (t* s1_y));
+        }
+
+        else return null;
+    }
 
 
 
@@ -192,17 +243,51 @@ public class AvoidanceSystem {
 
         return new Vector2D(eDist * Math.sin(angle), eDist * Math.cos(angle));
     }
-
-    private Point2D.Double getIntersection(Vector2D a, Vector2D b, Point2D.Double aStart, Point2D.Double bStart) {
-        //Algorithm from http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-
-        Vector2D p = new Vector2D(aStart.getX(), aStart.getY());
-        Vector2D q = new Vector2D(bStart.getX(), bStart.getY());
-        double r = Vector2D.getLength(a);
-        double s = Vector2D.getLength(b);
-
-        //  double t = Vector2D.sub(q,p).dot()
-
-        return null;
-    }
 }
+
+
+/*
+
+char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y,
+    float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
+{
+    float s1_x, s1_y, s2_x, s2_y;
+    s1_x = p1_x - p0_x;     s1_y = p1_y - p0_y;
+    s2_x = p3_x - p2_x;     s2_y = p3_y - p2_y;
+
+    float s, t;
+    s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+    t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+    if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+    {
+        // Collision detected
+        if (i_x != NULL)
+            *i_x = p0_x + (t * s1_x);
+        if (i_y != NULL)
+            *i_y = p0_y + (t * s1_y);
+        return 1;
+    }
+
+    return 0; // No collision
+}
+         */
+
+/*
+        Shot mostRecent = enemyShots.get(enemyShots.size() - 1);
+        List<Shot> matched = getBestMatchedShots(mostRecent, 10);
+
+        //System.out.println("Matched size " + matched.size());
+        for (int i = 0; i < matched.size(); i++) {
+            Vector2D er = new Vector2D(mostRecent.getRobotPointAtFire().getX() - mostRecent.getEnemyPointAtFire().getX(), mostRecent.getRobotPointAtFire().getY() - mostRecent.getEnemyPointAtFire().getY());
+            double ER_bearingRad = er.getHeadingRadians();
+
+            double angle = ER_bearingRad - Math.toRadians(matched.get(i).getEnemyDeltaAngle());
+            double currDistance = mostRecent.getTimeAlive() * (20 - 3 * mostRecent.getPower());
+            Point2D.Double hitPoint = new Point2D.Double(
+                    mostRecent.getEnemyPointAtFire().getX() + currDistance * Math.sin(angle),
+                    mostRecent.getEnemyPointAtFire().getY() + currDistance * Math.cos(angle));
+
+            g.setColor(new Color(255 - i * 20, i * 20, 0));
+            g.fillRoundRect((int) hitPoint.getX(), (int) hitPoint.getY(), 10, 10, 10, 10);
+        }*/
