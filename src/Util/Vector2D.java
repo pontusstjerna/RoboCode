@@ -1,6 +1,7 @@
 package Util;
 
 import java.awt.*;
+import java.awt.geom.Point2D;
 import java.util.Vector;
 
 /**
@@ -32,6 +33,12 @@ public class Vector2D
 
     public double getX(){return x;}
     public double getY(){return y;}
+    public void setX(double x){
+        this.x = x;
+    }
+    public void setY(double y){
+        this.y = y;
+    }
 
     //Dot product
     public double dot(Vector2D vector){

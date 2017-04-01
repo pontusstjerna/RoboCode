@@ -129,6 +129,10 @@ public class Shot implements Serializable{
         return power == 0 && bullet != null ? bullet.getPower() : power;
     }
 
+    public double getDistanceFromShooter(){
+        return  getTimeAlive() * (20 - 3 * getPower());
+    }
+
     public Point2D.Double getEnemyPointAtFire(){
         return enemyPointAtFire;
     }
@@ -197,7 +201,7 @@ public class Shot implements Serializable{
         return getDistance(shot, new WeightSet());
     }
 
-    states getState(){
+    public states getState(){
         return state;
     }
 

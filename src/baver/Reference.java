@@ -13,6 +13,9 @@ public final class Reference {
     public static final int REQUIRED_HIT_LIMIT = 2;
     public static double BATTLEFIELD_WIDTH = 0;
     public static double BATTLEFIELD_HEIGHT = 0;
+    public static int STICK_LENGTH = 200;
+    public static double STICK_TURN = 20;
+    public static double STICK_ADDITIONAL_WALL_DISTANCE = STICK_LENGTH*0.5;
 
     public static final int MAX_DELTA_HEADING = 180;
 
@@ -26,6 +29,7 @@ public final class Reference {
             5, //ENEMY_DIRECTION
             3  //BEARING_DIFFERENCE
     };
+
 
     public static final double[] AVOIDING_WEIGHTS = {
             0.2, //ENEMY_VELOCITY
