@@ -134,8 +134,9 @@ public class AvoidanceSystem {
 
         List<Point2D.Double> is = getIntersections(100);
         for (int i = 0; i < is.size(); i++) {
-
-                if (Util.isInFront(robot.getX(), robot.getY(), is.get(i).getX(), is.get(i).getY(), robot.getHeading())) {
+            Point2D.Double p = is.get(i);
+            if(p != null) {
+                if (Util.isInFront(robot.getX(), robot.getY(), p.getX(), p.getY(), robot.getHeading())) {
                     nFwd += (1 / ((double) i + 1));
                     //   System.out.println("In front!");
                 } else {
@@ -143,6 +144,7 @@ public class AvoidanceSystem {
                     // System.out.println("In back!");
                 }
 
+            }
                 //(1/((double)i + 1));
         }
 
@@ -157,35 +159,45 @@ public class AvoidanceSystem {
 
         List<Point2D.Double> is = getIntersections(100);
 
-        double x1 = robot.getX() + avoidanceVector.getX();
-        double y1 = robot.getY() + avoidanceVector.getY();
+        double x1 = robot.getX() + Reference.STICK_LENGTH*Math.sin(robot.getHeadingRadians());
+        double y1 = robot.getY() + Reference.STICK_LENGTH*Math.cos(robot.getHeadingRadians());
         double x2 = avoidanceVectorOrigin.getX();
         double y2 = avoidanceVectorOrigin.getY();
 
-        for(int i = 2; i < 16; i*=2){
+        for(int i = 1; i < 256; i*=2){
             int upper = 0;
             int lower = 0;
             for(int j = 0; j < is.size(); j++){
-                if(Util.isBetween(x1, y1, x2 - (Reference.STICK_LENGTH/i) * Math.sin(robot.getHeadingRadians()),
-                        y2 - (Reference.STICK_LENGTH/i) * Math.cos(robot.getHeadingRadians()),
-                        is.get(j).getX(), is.get(j).getY()))
-                    upper++;
-                else
-                    lower++;
+                Point2D.Double p = is.get(j);
+                if(p != null) {
+                    /*if (Util.isBetween(x1, y1, x2 + (Reference.STICK_LENGTH / i) * Math.sin(robot.getHeadingRadians()),
+                            y2 + (Reference.STICK_LENGTH / i) * Math.cos(robot.getHeadingRadians()),
+                            p.getX(), p.getY()))
+                        upper++;
+                    else
+                        lower++;*/
+
+                    if (Util.isInFront(x2 + (Reference.STICK_LENGTH / i) * Math.sin(robot.getHeadingRadians()),
+                            y2 + (Reference.STICK_LENGTH / i) * Math.cos(robot.getHeadingRadians()), p.getX(), p.getY(), robot.getHeading())) {
+                        lower++;
+                    } else {
+                        upper++;
+                    }
+                }
             }
          //   System.out.println("x1: " + x1 + " y1: " + y1 + " x2: " + x2 + " y2: " + y2);
 
             if(upper > lower) {
-                x2 -= (Reference.STICK_LENGTH/i) * Math.sin(robot.getHeadingRadians());
-                y2 -= (Reference.STICK_LENGTH/i) * Math.cos(robot.getHeadingRadians());
+                x2 += (Reference.STICK_LENGTH/i)*Math.sin(robot.getHeadingRadians());
+                y2 += (Reference.STICK_LENGTH/i)*Math.cos(robot.getHeadingRadians());
             }
             else{
-                x1 += (Reference.STICK_LENGTH/i) * Math.sin(robot.getHeadingRadians());
-                y1 += (Reference.STICK_LENGTH/i) * Math.cos(robot.getHeadingRadians());
+                x1 -= (Reference.STICK_LENGTH/i)*Math.sin(robot.getHeadingRadians());
+                y1 -= (Reference.STICK_LENGTH/i)*Math.cos(robot.getHeadingRadians()) ;
             }
         }
 
-        return new Point2D.Double(x1, x2);
+        return new Point2D.Double(x1, y1);
     }
 
     private Vector2D[] getShotVectors(int limit) {

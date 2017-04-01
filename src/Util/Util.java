@@ -67,6 +67,6 @@ public class Util {
     }
 
     public static boolean isBetween(double x1, double y1, double x2, double y2, double px, double py){
-        return px >= x1 && px <= x2 && py >= y1 && py <= y2;
+        return px >= x1 && px <= x2 && py <= y1 && py >= y2;
     }
 }
