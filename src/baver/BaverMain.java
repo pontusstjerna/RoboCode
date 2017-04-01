@@ -200,19 +200,6 @@ public class BaverMain extends AdvancedRobot {
             learningGun.aimAndFire(e);
     }
 
-    private Point2D.Double getIntersection(Vector2D a, Vector2D b, Point2D.Double aStart, Point2D.Double bStart) {
-        //Algorithm from http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-
-        Vector2D p = new Vector2D(aStart.getX(), aStart.getY());
-        Vector2D q = new Vector2D(bStart.getX(), bStart.getY());
-        double r = Vector2D.getLength(a);
-        double s = Vector2D.getLength(b);
-
-        //  double t = Vector2D.sub(q,p).dot()
-
-        return null;
-    }
-
     private boolean detectShot(ScannedRobotEvent e) {
         enemyDeltaEnergy = e.getEnergy() - oldEnemyEnergy;
         boolean fired = enemyDeltaEnergy < 0 && e.getTime() != lastBulletHitTime;
